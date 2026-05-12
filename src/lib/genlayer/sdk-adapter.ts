@@ -32,6 +32,11 @@ function getPrivateKey() {
   if (!privateKey) {
     throw new Error("GENLAYER_PRIVATE_KEY is not set.");
   }
+
+  if (/^[0-9a-fA-F]{64}$/.test(privateKey)) {
+    return `0x${privateKey}` as `0x${string}`;
+  }
+
   return privateKey as `0x${string}`;
 }
 
