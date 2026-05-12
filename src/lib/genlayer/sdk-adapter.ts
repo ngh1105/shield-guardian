@@ -25,6 +25,10 @@ type GenLayerSdkReceipt = {
   };
 };
 
+type GenLayerOverview = {
+  check_count?: number;
+};
+
 function getPrivateKey() {
   const privateKey =
     process.env.GENLAYER_PRIVATE_KEY?.trim() ||
@@ -70,7 +74,16 @@ function parseReturnedCheckId(receipt: GenLayerSdkReceipt) {
     return directReturn;
   }
 
-  throw new Error("GenLayer SDK did not return a valid action check id.");
+  return null;
+}
+
+function parseNextCheckId(overview: GenLayerOverview) {
+  const checkCount = Number(overview.check_count);
+  if (Number.isInteger(checkCount) && checkCount >= 0) {
+    return checkCount + 1;
+  }
+
+  return null;
 }
 
 function isFinishedWithReturn(receipt: GenLayerSdkReceiptStatus) {
@@ -84,6 +97,13 @@ async function submitSdkVerdictRequest(request: ShieldVerdictRequest) {
     account,
     chain: studionet,
   });
+
+  const overview = (await client.readContract({
+    address: contractAddress,
+    functionName: "get_overview",
+    args: [],
+  })) as GenLayerOverview;
+  const expectedCheckId = parseNextCheckId(overview);
 
   const transactionHash = await client.writeContract({
     account,
@@ -106,14 +126,17 @@ async function submitSdkVerdictRequest(request: ShieldVerdictRequest) {
     retries: 120,
   });
 
-  if (!isFinishedWithReturn(receipt)) {
-    throw new Error("GenLayer SDK transaction did not finish with a return value.");
-  }
+  const checkId =
+    isFinishedWithReturn(receipt)
+      ? parseReturnedCheckId({
+          result: receipt.result,
+          consensus_data: receipt.consensus_data,
+        })
+      : expectedCheckId;
 
-  const checkId = parseReturnedCheckId({
-    result: receipt.result,
-    consensus_data: receipt.consensus_data,
-  });
+  if (!checkId) {
+    throw new Error("GenLayer SDK did not determine an action check id.");
+  }
 
   const check = (await client.readContract({
     address: contractAddress,
