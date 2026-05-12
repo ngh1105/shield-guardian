@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# local logs and generated artifacts
+*.log
+__pycache__/
+*.pyc
+/dist/
+
 # next.js
 /.next/
 /out/
