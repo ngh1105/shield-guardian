@@ -105,7 +105,13 @@ function getContractAddress() {
 }
 
 function getAccountName() {
-  return process.env.GENLAYER_ACCOUNT_NAME?.trim() || "shieldtest";
+  const accountName = process.env.GENLAYER_ACCOUNT_NAME?.trim() || "shieldtest";
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(accountName)) {
+    throw new Error(
+      "GENLAYER_ACCOUNT_NAME must contain only letters, numbers, underscores, or hyphens.",
+    );
+  }
+  return accountName;
 }
 
 async function runGenLayerCommand(args: string[]) {
@@ -181,9 +187,26 @@ function extractResultBlock(output: string) {
   throw new Error(`Unterminated Result object in GenLayer output.\n${output}`);
 }
 
+function quoteObjectKeys(value: string) {
+  return value.replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3');
+}
+
+function normalizePythonJsonLiterals(value: string) {
+  return value
+    .replace(/\bNone\b/g, "null")
+    .replace(/\bTrue\b/g, "true")
+    .replace(/\bFalse\b/g, "false");
+}
+
 function parseObjectLiteral<T>(output: string): T {
   const raw = extractResultBlock(output);
-  return Function(`"use strict"; return (${raw});`)() as T;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const normalized = quoteObjectKeys(normalizePythonJsonLiterals(raw));
+    return JSON.parse(normalized) as T;
+  }
 }
 
 function parseReturnedCheckId(receipt: GenLayerWriteReceipt) {
