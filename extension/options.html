@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shield Guardian Settings</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="options-page">
+    <main class="shell settings-shell">
+      <header class="header">
+        <div class="brand">
+          <div class="mark">SG</div>
+          <div>
+            <h1>Shield Guardian settings</h1>
+            <p>Configure the API origin used by the extension.</p>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">API configuration</p>
+            <h2>Shield endpoint</h2>
+          </div>
+          <span id="permissionBadge" class="status-pill tone-neutral">Loading</span>
+        </div>
+
+        <form id="settingsForm" class="form">
+          <div class="field">
+            <label for="apiBaseUrl">Shield API base URL</label>
+            <input
+              id="apiBaseUrl"
+              name="apiBaseUrl"
+              type="url"
+              placeholder="http://localhost:3000"
+              required
+            />
+          </div>
+
+          <label class="checkbox-field" for="demoMode">
+            <input id="demoMode" name="demoMode" type="checkbox" />
+            <span>
+              Use demo mode when presenting. This sends a demo-mode header to the local API and
+              labels verdicts as mock/demo instead of GenLayer live.
+            </span>
+          </label>
+
+          <p id="permissionHelp" class="notice info">
+            The extension only requests host access for the chosen Shield API origin.
+          </p>
+
+          <div class="settings-footer">
+            <div class="settings-note">
+              Save the endpoint, then grant access when Chrome asks. The extension never stores
+              private keys or talks to the contract directly.
+            </div>
+
+            <div class="button-row">
+              <button id="resetButton" class="secondary-button" type="button">Use localhost</button>
+              <button id="previewPopupButton" class="ghost-button" type="button">
+                Preview popup
+              </button>
+              <button id="saveButton" class="primary-button" type="submit">
+                Save and request access
+              </button>
+            </div>
+          </div>
+
+          <p id="settingsNotice" class="notice hidden" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>

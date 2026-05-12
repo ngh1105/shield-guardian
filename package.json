@@ -1,0 +1,30 @@
+{
+  "name": "shield-guardian",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "check:extension": "node scripts/check-extension.mjs",
+    "package:extension": "node scripts/package-extension.mjs",
+    "smoke:api": "node scripts/smoke-api.mjs",
+    "smoke:demo": "node scripts/smoke-demo.mjs",
+    "verify:demo": "npm run lint && npm run build && npm run smoke:demo",
+    "verify:all": "npm run lint && npm run build && npm run check:extension && npm run package:extension && npm run smoke:demo"
+  },
+  "dependencies": {
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "typescript": "^5"
+  }
+}

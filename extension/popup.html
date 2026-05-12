@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shield Guardian</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="popup-page">
+    <main class="shell">
+      <header class="header">
+        <div class="brand">
+          <div class="mark">SG</div>
+          <div>
+            <h1>Shield Guardian</h1>
+            <p id="subtitle">Loading extension state...</p>
+          </div>
+        </div>
+        <button id="openSettingsButton" class="secondary-button small-button" type="button">
+          Settings
+        </button>
+      </header>
+
+      <section class="panel access-strip" aria-live="polite">
+        <div class="access-line">
+          <div>
+            <p class="eyebrow">Shield API</p>
+            <h2>Connection status</h2>
+          </div>
+          <span id="accessBadge" class="status-pill tone-neutral">Checking</span>
+        </div>
+        <p id="accessText" class="muted">Verifying configured API endpoint and permission state.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Current tab</p>
+            <h2>Capture context</h2>
+          </div>
+          <button id="captureTabButton" class="ghost-button small-button" type="button">
+            Capture tab
+          </button>
+        </div>
+        <div id="tabContext" class="context-card">
+          <p class="context-empty">Capture the active tab to prefill the action packet.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Action packet</p>
+            <h2>Review before analysis</h2>
+          </div>
+          <span class="hint">Warning-first flow</span>
+        </div>
+
+        <div id="demoPackets" class="demo-packet-grid" aria-label="Demo action packets"></div>
+
+        <form id="analysisForm" class="form">
+          <div class="grid-2">
+            <div class="field">
+              <label for="actionType">Action type</label>
+              <select id="actionType" name="actionType">
+                <option value="sign">Sign</option>
+                <option value="approve">Approve</option>
+                <option value="bridge">Bridge</option>
+                <option value="claim">Claim</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="protocol">Protocol</label>
+              <input
+                id="protocol"
+                name="protocol"
+                type="text"
+                placeholder="Uniswap, Aave, custom bridge"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="website">Website</label>
+            <input id="website" name="website" type="text" placeholder="https://app.uniswap.org" />
+          </div>
+
+          <div class="field">
+            <label for="summary">Action summary</label>
+            <textarea
+              id="summary"
+              name="summary"
+              rows="3"
+              placeholder="Describe exactly what the wallet popup is asking the user to do."
+            ></textarea>
+          </div>
+
+          <div class="field">
+            <label for="rawSignals">Raw signals</label>
+            <textarea
+              id="rawSignals"
+              name="rawSignals"
+              rows="3"
+              placeholder="Paste spender notes, route hints, host signals, or text from the popup."
+            ></textarea>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="assetValueUsd">Asset value (USD)</label>
+              <input
+                id="assetValueUsd"
+                name="assetValueUsd"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="240"
+              />
+            </div>
+
+            <div class="field">
+              <label for="gasCostUsd">Gas cost (USD)</label>
+              <input
+                id="gasCostUsd"
+                name="gasCostUsd"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="3.5"
+              />
+            </div>
+          </div>
+
+          <p id="formNotice" class="notice hidden" role="status"></p>
+
+          <div class="button-row">
+            <button id="analyzeButton" class="primary-button" type="submit">Analyze action</button>
+            <button id="resetButton" class="secondary-button" type="button">Reset packet</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="verdictPanel" class="panel verdict-card" aria-live="polite">
+        <div class="verdict-placeholder">
+          No verdict yet. Capture the tab or submit a packet to see Shield Guardian respond.
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>

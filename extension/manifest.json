@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Shield Guardian",
+  "version": "0.1.0",
+  "description": "Warning-first wallet action analysis for Chrome.",
+  "action": {
+    "default_title": "Shield Guardian",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*"],
+  "permissions": ["activeTab", "storage", "scripting"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"]
+}

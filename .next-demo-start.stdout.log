@@ -1,0 +1,8 @@
+
+> shield-guardian@0.1.0 start
+> next start --port 3107
+
+▲ Next.js 16.2.1
+- Local:         http://localhost:3107
+- Network:       http://172.30.144.1:3107
+✓ Ready in 193ms
