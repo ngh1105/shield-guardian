@@ -141,7 +141,7 @@ async function submitSdkVerdictRequest(request: ShieldVerdictRequest) {
   const check = (await client.readContract({
     address: contractAddress,
     functionName: "get_check",
-    args: [String(checkId)],
+    args: [checkId],
   })) as GenLayerCheck;
 
   return mapCheckToVerdict(check, request, {
