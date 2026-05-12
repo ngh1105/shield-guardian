@@ -101,7 +101,7 @@ async function submitSdkVerdictRequest(request: ShieldVerdictRequest) {
 
   const receipt = await client.waitForTransactionReceipt({
     hash: transactionHash,
-    status: TransactionStatus.FINALIZED,
+    status: TransactionStatus.ACCEPTED,
   });
 
   if (!isFinishedWithReturn(receipt)) {
