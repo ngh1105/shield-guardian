@@ -7,6 +7,7 @@ export type GenLayerCheck = {
   action_type: string;
   challenge_count: number;
   check_id: number;
+  claimed_requester: string;
   confidence_bps: number;
   coverage_status: string;
   created_epoch: number;
@@ -44,5 +45,6 @@ export type GenLayerVerdictMetadata = {
 export type GenLayerVerdictAdapter = {
   submitVerdictRequest(
     request: ShieldVerdictRequest,
+    options?: { claimedRequester?: string },
   ): Promise<ShieldVerdictResponse>;
 };
