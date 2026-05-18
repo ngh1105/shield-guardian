@@ -22,6 +22,7 @@ export type ShieldVerdictRequest = {
   rawSignals: string;
   assetValueUsd: number;
   gasCostUsd: number;
+  claimedRequester?: string;
 };
 
 export type ShieldVerdictResponse = {
