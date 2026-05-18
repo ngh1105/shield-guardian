@@ -188,23 +188,41 @@ async function waitForTransaction(hash: string | undefined) {
   await runGenLayerCommand(["receipt", hash]);
 }
 
-async function submitCliVerdictRequest(request: ShieldVerdictRequest) {
+async function submitCliVerdictRequest(
+  request: ShieldVerdictRequest,
+  options: { claimedRequester?: string } = {},
+) {
   const contractAddress = getContractAddress();
   const accountName = getAccountName();
 
   await runGenLayerCommand(["account", "use", accountName]);
 
-  const writeOutput = await runGenLayerCommand([
-    "write",
-    contractAddress,
-    "submit_action_check",
-    "--args",
-    request.actionType,
-    request.protocol,
-    request.website,
-    request.summary,
-    request.rawSignals,
-  ]);
+  const writeArgs = options.claimedRequester
+    ? [
+        "write",
+        contractAddress,
+        "submit_action_check_for",
+        "--args",
+        options.claimedRequester,
+        request.actionType,
+        request.protocol,
+        request.website,
+        request.summary,
+        request.rawSignals,
+      ]
+    : [
+        "write",
+        contractAddress,
+        "submit_action_check",
+        "--args",
+        request.actionType,
+        request.protocol,
+        request.website,
+        request.summary,
+        request.rawSignals,
+      ];
+
+  const writeOutput = await runGenLayerCommand(writeArgs);
 
   const receipt = parseObjectLiteral<GenLayerWriteReceipt>(writeOutput);
   const checkId = parseReturnedCheckId(receipt);

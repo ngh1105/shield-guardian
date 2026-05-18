@@ -23,6 +23,9 @@ function createGenLayerAdapter(): GenLayerVerdictAdapter {
   return createCliGenLayerAdapter();
 }
 
-export async function submitVerdictRequest(request: ShieldVerdictRequest) {
-  return createGenLayerAdapter().submitVerdictRequest(request);
+export async function submitVerdictRequest(
+  request: ShieldVerdictRequest,
+  options?: { claimedRequester?: string },
+) {
+  return createGenLayerAdapter().submitVerdictRequest(request, options);
 }
