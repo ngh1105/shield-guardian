@@ -7,6 +7,7 @@ import { submitVerdictRequest } from "@/lib/genlayer-client";
 
 const ALLOWED_ACTION_TYPES = new Set(["sign", "approve", "bridge", "claim"]);
 const DEMO_MODE_HEADER = "x-shield-demo-mode";
+const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 function parseUsdNumber(value: unknown) {
   const parsed = Number(value ?? 0);
@@ -62,6 +63,26 @@ export async function POST(request: Request) {
     );
   }
 
+  const rawClaimedRequester = (payload as { claimedRequester?: unknown })
+    .claimedRequester;
+  let claimedRequester: string | undefined;
+  if (
+    rawClaimedRequester !== undefined &&
+    rawClaimedRequester !== null &&
+    rawClaimedRequester !== ""
+  ) {
+    if (
+      typeof rawClaimedRequester !== "string" ||
+      !ETH_ADDRESS_REGEX.test(rawClaimedRequester)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid claimedRequester address." },
+        { status: 400 },
+      );
+    }
+    claimedRequester = rawClaimedRequester;
+  }
+
   const normalizedPayload: ShieldVerdictRequest = {
     actionType: payload.actionType,
     protocol: payload.protocol?.trim() ?? "",
@@ -77,7 +98,7 @@ export async function POST(request: Request) {
   try {
     verdict = shouldUseDemoMode(request)
       ? getShieldVerdict(normalizedPayload)
-      : await submitVerdictRequest(normalizedPayload);
+      : await submitVerdictRequest(normalizedPayload, { claimedRequester });
   } catch (error) {
     if (
       error instanceof Error &&
