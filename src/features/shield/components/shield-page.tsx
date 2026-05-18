@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 
+import { ActivityHistory } from "@/features/shield/components/activity-history";
+import { OverviewStats } from "@/features/shield/components/overview-stats";
 import {
   INITIAL_FORM,
   SHIELD_EXAMPLES,
@@ -15,54 +17,8 @@ import type {
   ShieldVerdictResponse,
   VerdictLabel,
 } from "@/features/shield/types";
-
-const DEFAULT_VERDICT: ShieldVerdictResponse = {
-  verdict: "DANGEROUS",
-  riskScore: 94,
-  confidence: 96,
-  reasons: [
-    "Hidden drainer logic detected behind a blind signature request.",
-    "Unlimited approval path combined with a mismatched spender contract.",
-    "High slippage and off-route routing increase loss surface materially.",
-    "Landing domain pattern matches known claim-and-drain phishing clusters.",
-  ],
-  nextStep:
-    "Abort transaction, revoke recent approvals, and reopen the flow only from the verified protocol host.",
-  coverageEligible: false,
-  briefing:
-    "This transaction should be treated as hostile until the user verifies the spender, route, and source domain.",
-  provenance: {
-    source: "mock",
-    coverageStatus: "none",
-  },
-};
-
-const HISTORY_ROWS = [
-  {
-    timestamp: "2026-03-22 13:42 UTC+7",
-    protocol: "Uniswap",
-    action: "Approve WETH Router",
-    verdict: "SAFE" as VerdictLabel,
-  },
-  {
-    timestamp: "2026-03-22 13:31 UTC+7",
-    protocol: "Retrodrop Portal",
-    action: "Claim Bonus Drop",
-    verdict: "DANGEROUS" as VerdictLabel,
-  },
-  {
-    timestamp: "2026-03-22 13:14 UTC+7",
-    protocol: "Custom Bridge",
-    action: "Bridge ETH via Discord Route",
-    verdict: "WEIRD" as VerdictLabel,
-  },
-  {
-    timestamp: "2026-03-22 12:58 UTC+7",
-    protocol: "Safe",
-    action: "Sign Recovery Policy",
-    verdict: "SAFE" as VerdictLabel,
-  },
-];
+import { ConnectButton } from "@/features/wallet/connect-button";
+import { useWallet } from "@/features/wallet/wallet-context";
 
 const KERNEL_LOG = [
   "[KERNEL] interceptor online :: policy surface synchronized",
@@ -137,15 +93,6 @@ function verdictTone(verdict: VerdictLabel) {
   return styles.dangerous;
 }
 
-function protocolGlyph(protocol: string) {
-  return protocol
-    .split(" ")
-    .map((chunk) => chunk[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 function formatShortHash(value: string) {
   if (value.length <= 18) {
     return value;
@@ -196,9 +143,9 @@ export function ShieldPage() {
   const [error, setError] = useState("");
   const [demoMode, setDemoMode] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const wallet = useWallet();
 
-  const displayedVerdict = result ?? DEFAULT_VERDICT;
-  const provenanceRows = getProvenanceRows(displayedVerdict);
+  const provenanceRows = result ? getProvenanceRows(result) : [];
 
   function updateField<Key extends keyof ShieldFormState>(
     key: Key,
@@ -229,10 +176,12 @@ export function ShieldPage() {
           rawSignals: form.rawSignals,
           assetValueUsd: Number(form.assetValueUsd || 0),
           gasCostUsd: Number(form.gasCostUsd || 0),
+          ...(wallet.address ? { claimedRequester: wallet.address } : {}),
         };
 
         const verdict = await requestShieldVerdict(payload, { demoMode });
         setResult(verdict);
+        wallet.bumpInvalidation();
       } catch {
         setError(
           demoMode
@@ -258,6 +207,7 @@ export function ShieldPage() {
           <a href="#history">Audit Trail</a>
           <a href="#coverage">Coverage Mandate</a>
           <a href="#readiness">Demo Readiness</a>
+          <ConnectButton />
         </nav>
       </header>
 
@@ -489,63 +439,82 @@ export function ShieldPage() {
                 <p className={styles.metricLabel}>Analysis Canvas</p>
                 <h3>Verdict Result</h3>
               </div>
-              <div className={`${styles.canvasBadge} ${verdictTone(displayedVerdict.verdict)}`}>
-                {displayedVerdict.verdict}
+              <div
+                className={`${styles.canvasBadge} ${result ? verdictTone(result.verdict) : ""}`}
+              >
+                {result ? result.verdict : "IDLE"}
               </div>
             </div>
 
-            <div className={styles.verdictHero}>
-              <div>
-                <p className={styles.metricLabel}>Risk level</p>
-                <h4 className={verdictTone(displayedVerdict.verdict)}>
-                  {displayedVerdict.verdict}
-                </h4>
-              </div>
-              <div className={styles.scoreBlock}>
-                <span>Risk Score</span>
-                <strong>{displayedVerdict.riskScore}/100</strong>
-                <p>Confidence {displayedVerdict.confidence}%</p>
-              </div>
-            </div>
-
-            {provenanceRows.length ? (
-              <div className={styles.provenanceGrid}>
-                {provenanceRows.map((row) => (
-                  <div key={row.label} className={styles.provenanceItem}>
-                    <span className={styles.metricLabel}>{row.label}</span>
-                    <strong title={row.title}>{row.value}</strong>
+            {result ? (
+              <>
+                <div className={styles.verdictHero}>
+                  <div>
+                    <p className={styles.metricLabel}>Risk level</p>
+                    <h4 className={verdictTone(result.verdict)}>
+                      {result.verdict}
+                    </h4>
                   </div>
-                ))}
+                  <div className={styles.scoreBlock}>
+                    <span>Risk Score</span>
+                    <strong>{result.riskScore}/100</strong>
+                    <p>Confidence {result.confidence}%</p>
+                  </div>
+                </div>
+
+                {provenanceRows.length ? (
+                  <div className={styles.provenanceGrid}>
+                    {provenanceRows.map((row) => (
+                      <div
+                        key={row.label}
+                        className={styles.provenanceItem}
+                      >
+                        <span className={styles.metricLabel}>{row.label}</span>
+                        <strong title={row.title}>{row.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className={styles.reasonBlock}>
+                  <div className={styles.reasonHeader}>
+                    <span className={styles.metricLabel}>Risk Signals</span>
+                    <span className={styles.metricLabel}>
+                      Coverage {result.coverageEligible ? "Eligible" : "Denied"}
+                    </span>
+                  </div>
+                  <ul className={styles.reasonList}>
+                    {result.reasons.map((reason) => (
+                      <li key={reason} className={styles.reasonItem}>
+                        {reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className={styles.briefingCard}>
+                  <span className={styles.metricLabel}>Shield Briefing</span>
+                  <p>{result.briefing}</p>
+                </div>
+
+                <div className={styles.verdictActions}>
+                  <button className={styles.abortButton} type="button">
+                    Abort Transaction
+                  </button>
+                  <button className={styles.secondaryButton} type="button">
+                    Proceed with Caution
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className={styles.briefingCard}>
+                <span className={styles.metricLabel}>Idle</span>
+                <p>
+                  Submit an action packet to receive a verdict from the
+                  GenLayer policy court.
+                </p>
               </div>
-            ) : null}
-
-            <div className={styles.reasonBlock}>
-              <div className={styles.reasonHeader}>
-                <span className={styles.metricLabel}>Risk Signals</span>
-                <span className={styles.metricLabel}>Coverage {displayedVerdict.coverageEligible ? "Eligible" : "Denied"}</span>
-              </div>
-              <ul className={styles.reasonList}>
-                {displayedVerdict.reasons.map((reason) => (
-                  <li key={reason} className={styles.reasonItem}>
-                    {reason}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className={styles.briefingCard}>
-              <span className={styles.metricLabel}>Shield Briefing</span>
-              <p>{displayedVerdict.briefing}</p>
-            </div>
-
-            <div className={styles.verdictActions}>
-              <button className={styles.abortButton} type="button">
-                Abort Transaction
-              </button>
-              <button className={styles.secondaryButton} type="button">
-                Proceed with Caution
-              </button>
-            </div>
+            )}
 
             <div className={styles.kernelLog}>
               <div className={styles.kernelHead}>
@@ -590,45 +559,9 @@ export function ShieldPage() {
           <h2>Dense, sortable security memory for every intercepted action.</h2>
         </div>
 
-        <div className={styles.statsGrid}>
-          <article className={styles.statCard}>
-            <span className={styles.metricLabel}>Total Scans</span>
-            <strong>12,804</strong>
-            <p>Across wallet, bridge, and claim flows</p>
-          </article>
-          <article className={styles.statCard}>
-            <span className={styles.metricLabel}>Threats Blocked</span>
-            <strong>481</strong>
-            <p>Stopped before signer confirmation</p>
-          </article>
-          <article className={styles.statCard}>
-            <span className={styles.metricLabel}>Suspicious Actions</span>
-            <strong>1,129</strong>
-            <p>Escalated to Weird or Dangerous state</p>
-          </article>
-        </div>
+        <OverviewStats />
 
-        <div className={styles.tableShell}>
-          <div className={styles.tableHeader}>
-            <span>Timestamp</span>
-            <span>Protocol</span>
-            <span>Action</span>
-            <span>Verdict</span>
-          </div>
-          {HISTORY_ROWS.map((row) => (
-            <div key={`${row.timestamp}-${row.action}`} className={styles.tableRow}>
-              <span>{row.timestamp}</span>
-              <span className={styles.protocolCell}>
-                <span className={styles.protocolIcon}>{protocolGlyph(row.protocol)}</span>
-                {row.protocol}
-              </span>
-              <span>{row.action}</span>
-              <span className={`${styles.badge} ${verdictTone(row.verdict)}`}>
-                {row.verdict}
-              </span>
-            </div>
-          ))}
-        </div>
+        <ActivityHistory />
       </section>
 
       <section className={styles.section} id="coverage">
@@ -651,12 +584,6 @@ export function ShieldPage() {
               <li>Pre-execution simulation before wallet confirmation</li>
               <li>Policy court handoff for challenge and post-loss review</li>
             </ul>
-          </div>
-
-          <div className={styles.capacityCard}>
-            <span className={styles.metricLabel}>Current Capacity</span>
-            <strong>12.4 ETH</strong>
-            <p>Portfolio-level shield room available for protected actions this epoch.</p>
           </div>
 
           <div className={styles.conditionsCard}>
