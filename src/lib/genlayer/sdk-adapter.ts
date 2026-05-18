@@ -90,7 +90,10 @@ function isFinishedWithReturn(receipt: GenLayerSdkReceiptStatus) {
   return receipt.txExecutionResultName === ExecutionResult.FINISHED_WITH_RETURN;
 }
 
-async function submitSdkVerdictRequest(request: ShieldVerdictRequest) {
+async function submitSdkVerdictRequest(
+  request: ShieldVerdictRequest,
+  options: { claimedRequester?: string } = {},
+) {
   const contractAddress = getContractAddressForSdk();
   const account = createAccount(getPrivateKey());
   const client = createClient({
@@ -105,17 +108,30 @@ async function submitSdkVerdictRequest(request: ShieldVerdictRequest) {
   })) as GenLayerOverview;
   const expectedCheckId = parseNextCheckId(overview);
 
+  const writeArgs = options.claimedRequester
+    ? [
+        options.claimedRequester,
+        request.actionType,
+        request.protocol,
+        request.website,
+        request.summary,
+        request.rawSignals,
+      ]
+    : [
+        request.actionType,
+        request.protocol,
+        request.website,
+        request.summary,
+        request.rawSignals,
+      ];
+
   const transactionHash = await client.writeContract({
     account,
     address: contractAddress,
-    functionName: "submit_action_check",
-    args: [
-      request.actionType,
-      request.protocol,
-      request.website,
-      request.summary,
-      request.rawSignals,
-    ],
+    functionName: options.claimedRequester
+      ? "submit_action_check_for"
+      : "submit_action_check",
+    args: writeArgs,
     value: BigInt(0),
   });
 
