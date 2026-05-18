@@ -78,6 +78,7 @@ export function useOverview(invalidationKey: number): FetchState<OverviewSnapsho
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- show loading state on each refetch
     setState((current) => ({ ...current, loading: true }));
     fetchOverview()
       .then((data) => {
@@ -112,6 +113,7 @@ export function useMyChecks(
 
   useEffect(() => {
     if (!address) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale data when address detaches
       setState({ data: null, error: null, loading: false });
       return;
     }

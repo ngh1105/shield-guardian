@@ -30,6 +30,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!window.ethereum) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time detection of missing EIP-1193 provider
       setStatus("unsupported");
       return;
     }
