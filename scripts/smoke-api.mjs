@@ -85,4 +85,30 @@ for (const packet of packets) {
   );
 }
 
+if (!demoMode) {
+  const overviewResponse = await fetch(new URL("/api/overview", apiBaseUrl));
+  assert(
+    overviewResponse.ok,
+    `Overview smoke failed with ${overviewResponse.status}`,
+  );
+  const overviewData = await overviewResponse.json();
+  const overview = overviewData.overview;
+  assert(overview, "Missing overview in response.");
+  for (const key of [
+    "current_epoch",
+    "check_count",
+    "safe",
+    "weird",
+    "dangerous",
+  ]) {
+    assert(
+      typeof overview[key] === "number",
+      `Overview field ${key} is not a number.`,
+    );
+  }
+  console.log(
+    `OVERVIEW: count=${overview.check_count} safe=${overview.safe} weird=${overview.weird} dangerous=${overview.dangerous}`,
+  );
+}
+
 console.log(`API smoke passed against ${endpoint}.`);

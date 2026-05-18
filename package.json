@@ -10,6 +10,7 @@
     "check:extension": "node scripts/check-extension.mjs",
     "package:extension": "node scripts/package-extension.mjs",
     "smoke:api": "node scripts/smoke-api.mjs",
+    "smoke:checks": "node scripts/smoke-checks.mjs",
     "smoke:demo": "node scripts/smoke-demo.mjs",
     "verify:demo": "npm run lint && npm run build && npm run smoke:demo",
     "verify:all": "npm run lint && npm run build && npm run check:extension && npm run package:extension && npm run smoke:demo"
