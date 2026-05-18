@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import { WalletProvider } from "@/features/wallet/wallet-context";
 import {
   PROJECT_DESCRIPTION,
   PROJECT_NAME,
@@ -18,7 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <WalletProvider>{children}</WalletProvider>
+      </body>
     </html>
   );
 }

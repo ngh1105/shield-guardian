@@ -1,0 +1,44 @@
+.connect {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(12, 18, 28, 0.7);
+  color: #e7eef8;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.connect:hover:not(:disabled) {
+  background: rgba(38, 56, 84, 0.9);
+}
+
+.connect:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.connectActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e7eef8;
+  font-size: 0.85rem;
+}
+
+.connectDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #62e1a8;
+}
+
+.disconnect {
+  background: transparent;
+  border: none;
+  color: rgba(231, 238, 248, 0.65);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
