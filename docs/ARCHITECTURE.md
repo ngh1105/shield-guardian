@@ -33,6 +33,24 @@ port, so `http://localhost:3000` resolves to the host permission pattern
 `http://localhost/*` while the actual verdict endpoint remains
 `http://localhost:3000/api/verdict`.
 
+## Wallet Identity
+
+The web app reads the connected wallet from `window.ethereum` (EIP-1193) via
+`src/features/wallet/wallet-context.tsx`. The address is forwarded to the
+verdict API as `claimedRequester`. The server still signs the GenLayer
+transaction with `GENLAYER_PRIVATE_KEY` — wallet connection is identity-only
+in Phase A.
+
+The contract stores `claimed_requester` separately from `requester` (the
+on-chain message sender), so per-wallet history is honest:
+
+- `submit_action_check_for(claimed_requester, ...)` is used when the user
+  has connected a wallet.
+- `submit_action_check(...)` (legacy) is used for anonymous submissions and
+  records `claimed_requester = sender_address`.
+- `get_checks_for(claimed_requester, limit)` powers `GET /api/checks`.
+- `get_overview()` powers `GET /api/overview`.
+
 ## Runtime Setup
 
 Use the fixed Studionet contract:
@@ -54,3 +72,6 @@ can be submitted.
 - `report_loss`: records a loss report and updates coverage status
 - `get_check`: reads one stored action check
 - `get_overview`: returns aggregate verdict counts
+- `submit_action_check_for`: same as `submit_action_check` but records a
+  declared `claimed_requester` address
+- `get_checks_for`: returns recent checks filtered by `claimed_requester`

@@ -60,15 +60,18 @@ server was started with `SHIELD_ENABLE_DEMO_MODE=1`.
 
 ## Demo Flow
 
-1. Open any normal web page.
-2. Open the Shield Guardian popup.
-3. Click Capture tab.
-4. Click one of the quick packet buttons:
+1. (Optional) Click Connect Wallet in the topbar and approve the MetaMask
+   prompt. The address appears with a green status dot. The verdict you
+   submit will be attributed to this address and visible in Activity History.
+2. Open any normal web page.
+3. Open the Shield Guardian popup.
+4. Click Capture tab.
+5. Click one of the quick packet buttons:
    - Safe swap
    - Weird bridge
    - Dangerous claim
-5. Click Analyze action.
-6. Point out the verdict, risk score, confidence, reasons, next step, and
+6. Click Analyze action.
+7. Point out the verdict, risk score, confidence, reasons, next step, and
    provenance.
 
 Expected demo-mode outcomes:

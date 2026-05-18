@@ -31,6 +31,7 @@ npm run verify:demo
 - `src/app` - Next.js routes and API handlers
 - `src/components` - shared layout and UI primitives
 - `src/features/shield` - Shield product UI, data, and helpers
+- `src/features/wallet` - wallet identity (EIP-1193 context and connect button)
 - `src/lib` - server-side integration helpers
 - `extension` - optional Chrome MV3 companion extension
 - `contracts` - GenLayer intelligent contracts
@@ -40,7 +41,10 @@ npm run verify:demo
 
 - `src/app/page.tsx`
 - `src/app/api/verdict/route.ts`
+- `src/app/api/checks/route.ts`
+- `src/app/api/overview/route.ts`
 - `src/features/shield/components/shield-page.tsx`
+- `src/features/wallet/wallet-context.tsx`
 - `src/lib/genlayer-client.ts`
 - `extension/popup.html`
 - `extension/options.html`
