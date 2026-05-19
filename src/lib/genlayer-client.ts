@@ -1,4 +1,4 @@
-import { createAccount, createClient } from "genlayer-js";
+import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import { CalldataAddress } from "genlayer-js/types";
 import type { Address } from "viem";
@@ -37,17 +37,7 @@ export async function submitVerdictRequest(
 }
 
 function getReadOnlyClient() {
-  const privateKey =
-    process.env.GENLAYER_PRIVATE_KEY?.trim() ||
-    process.env.GENLAYER_ACCOUNT_PRIVATE_KEY?.trim();
-  if (!privateKey) {
-    throw new Error("GENLAYER_PRIVATE_KEY is not set.");
-  }
-  const normalized = /^[0-9a-fA-F]{64}$/.test(privateKey)
-    ? (`0x${privateKey}` as `0x${string}`)
-    : (privateKey as `0x${string}`);
-  const account = createAccount(normalized);
-  return createClient({ account, chain: studionet });
+  return createClient({ chain: studionet });
 }
 
 export type ContractOverview = {
