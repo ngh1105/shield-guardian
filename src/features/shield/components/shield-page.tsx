@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import type { Address } from "viem";
 
 import { ActivityHistory } from "@/features/shield/components/activity-history";
+import { ConfirmationPanel } from "@/features/shield/components/confirmation-panel";
 import { OverviewStats } from "@/features/shield/components/overview-stats";
 import {
   INITIAL_FORM,
   SHIELD_EXAMPLES,
 } from "@/features/shield/data/examples";
 import { requestShieldVerdict } from "@/features/shield/lib/request-verdict";
+import { useShieldVerdict } from "@/features/shield/lib/use-shield-verdict";
 import styles from "@/features/shield/shield-page.module.css";
 import type {
   ActionType,
@@ -144,6 +147,7 @@ export function ShieldPage() {
   const [demoMode, setDemoMode] = useState(false);
   const [isPending, startTransition] = useTransition();
   const wallet = useWallet();
+  const verdict = useShieldVerdict();
 
   const provenanceRows = result ? getProvenanceRows(result) : [];
 
@@ -166,31 +170,51 @@ export function ShieldPage() {
     event.preventDefault();
     setError("");
 
-    startTransition(async () => {
-      try {
-        const payload: ShieldVerdictRequest = {
-          actionType: form.actionType,
-          protocol: form.protocol,
-          website: form.website,
-          summary: form.summary,
-          rawSignals: form.rawSignals,
-          assetValueUsd: Number(form.assetValueUsd || 0),
-          gasCostUsd: Number(form.gasCostUsd || 0),
-          ...(wallet.address ? { claimedRequester: wallet.address } : {}),
-        };
+    const payload: ShieldVerdictRequest = {
+      actionType: form.actionType,
+      protocol: form.protocol,
+      website: form.website,
+      summary: form.summary,
+      rawSignals: form.rawSignals,
+      assetValueUsd: Number(form.assetValueUsd || 0),
+      gasCostUsd: Number(form.gasCostUsd || 0),
+    };
 
-        const verdict = await requestShieldVerdict(payload, { demoMode });
-        setResult(verdict);
-        wallet.bumpInvalidation();
-      } catch {
-        setError(
-          demoMode
-            ? "Demo analysis unavailable. Confirm SHIELD_ENABLE_DEMO_MODE=1 on the server."
-            : "Analysis stream unavailable. Retry with a valid host and action packet.",
-        );
-      }
-    });
+    if (demoMode) {
+      startTransition(async () => {
+        try {
+          const response = await requestShieldVerdict(payload, { demoMode: true });
+          setResult(response);
+          wallet.bumpInvalidation();
+        } catch {
+          setError(
+            "Demo analysis unavailable. Confirm SHIELD_ENABLE_DEMO_MODE=1 on the server.",
+          );
+        }
+      });
+      return;
+    }
+
+    if (!wallet.address || wallet.status !== "connected") {
+      setError("Connect your wallet to run a live verdict.");
+      return;
+    }
+
+    await verdict.beginVerdict(payload);
   }
+
+  async function handleConfirm() {
+    if (!wallet.address) return;
+    await verdict.confirmVerdict(wallet.address as Address);
+  }
+
+  useEffect(() => {
+    if (verdict.state.phase === "done" && verdict.state.result) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror async verdict result into local state for canvas rendering
+      setResult(verdict.state.result);
+      wallet.bumpInvalidation();
+    }
+  }, [verdict.state.phase, verdict.state.result, wallet]);
 
   return (
     <div className={styles.page}>
@@ -417,10 +441,16 @@ export function ShieldPage() {
               <div className={styles.formActions}>
                 <button
                   className={styles.primaryButton}
-                  disabled={isPending}
+                  disabled={
+                    isPending ||
+                    verdict.state.phase === "preflight" ||
+                    verdict.state.phase === "signing"
+                  }
                   type="submit"
                 >
-                  {isPending ? "Intercepting..." : "Run Analysis"}
+                  {isPending || verdict.state.phase === "preflight" || verdict.state.phase === "signing"
+                    ? "Working with wallet..."
+                    : "Run Analysis"}
                 </button>
                 <button
                   className={styles.secondaryButton}
@@ -445,6 +475,38 @@ export function ShieldPage() {
                 {result ? result.verdict : "IDLE"}
               </div>
             </div>
+
+            {verdict.state.phase === "preflight" ? (
+              <p className={styles.metricLabel}>Confirming chain in your wallet...</p>
+            ) : null}
+
+            {verdict.state.phase === "awaiting-confirm" && verdict.state.request ? (
+              <ConfirmationPanel
+                walletAddress={wallet.address ?? ""}
+                contractAddress={process.env.NEXT_PUBLIC_PHASE_B_CONTRACT ?? ""}
+                request={verdict.state.request}
+                busy={false}
+                onConfirm={handleConfirm}
+                onCancel={verdict.cancelVerdict}
+              />
+            ) : null}
+
+            {verdict.state.phase === "signing" && verdict.state.request ? (
+              <ConfirmationPanel
+                walletAddress={wallet.address ?? ""}
+                contractAddress={process.env.NEXT_PUBLIC_PHASE_B_CONTRACT ?? ""}
+                request={verdict.state.request}
+                busy
+                onConfirm={() => undefined}
+                onCancel={verdict.cancelVerdict}
+              />
+            ) : null}
+
+            {verdict.state.phase === "error" ? (
+              <p className={styles.errorText}>
+                {verdict.state.error ?? "Verdict failed."}
+              </p>
+            ) : null}
 
             {result ? (
               <>
