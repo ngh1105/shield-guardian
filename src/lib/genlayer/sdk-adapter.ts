@@ -1,7 +1,8 @@
 import { createAccount, createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import { ExecutionResult, TransactionStatus } from "genlayer-js/types";
+import { CalldataAddress, ExecutionResult, TransactionStatus } from "genlayer-js/types";
 import type { Address } from "viem";
+import { hexToBytes } from "viem";
 
 import type { ShieldVerdictRequest } from "@/features/shield/types";
 
@@ -110,7 +111,7 @@ async function submitSdkVerdictRequest(
 
   const writeArgs = options.claimedRequester
     ? [
-        options.claimedRequester,
+        new CalldataAddress(hexToBytes(options.claimedRequester as `0x${string}`)),
         request.actionType,
         request.protocol,
         request.website,

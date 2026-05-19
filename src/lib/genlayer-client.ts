@@ -1,6 +1,8 @@
 import { createAccount, createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
+import { CalldataAddress } from "genlayer-js/types";
 import type { Address } from "viem";
+import { hexToBytes } from "viem";
 
 import type { ShieldVerdictRequest } from "@/features/shield/types";
 
@@ -73,6 +75,6 @@ export async function readChecksFor(
   return (await client.readContract({
     address: getContractAddress() as Address,
     functionName: "get_checks_for",
-    args: [address, limit],
+    args: [new CalldataAddress(hexToBytes(address as `0x${string}`)), limit],
   })) as GenLayerCheck[];
 }
