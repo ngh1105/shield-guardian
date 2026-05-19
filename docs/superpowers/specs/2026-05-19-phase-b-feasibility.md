@@ -486,3 +486,59 @@ cycle. This report supersedes that omission: future Phase B work
 should treat §3.1 as the canonical client-construction shape, not the
 inferred-from-types shape.
 
+## 5. Implementation status (post-Phase-B-build)
+
+**Date:** 2026-05-19
+
+The Phase B implementation plan
+(`docs/superpowers/plans/2026-05-19-phase-b-implementation.md`) landed
+in commits `098939a..ef8f1f8` (11 commits). The four §4.1
+deliverables are all in `main`:
+
+- Browser SDK adapter: `src/lib/genlayer/browser-sdk-adapter.ts` —
+  uses the §3.1 shape verbatim (bare Address string for
+  `createClient.account`, `account` omitted on `writeContract`).
+- Pre-flight chain check: `src/lib/genlayer/chain-preflight.ts`
+  (`ensureStudionet`) — handles `wallet_switchEthereumChain` →
+  catch 4902 → `wallet_addEthereumChain` → re-switch.
+- Confirmation panel: `src/features/shield/components/confirmation-panel.tsx` —
+  shows action / wallet / policy contract / consensus contract before
+  the wallet prompt.
+- Server-side signing removed: `GENLAYER_PRIVATE_KEY` no longer read
+  by any code in `src/`; `/api/verdict` returns HTTP 410 for non-demo
+  requests; `submit_action_check_for` and `claimedRequester` are gone
+  from the request type.
+
+Build and lint are clean. Final integration review (commit
+`bd8fffd` plus `ef8f1f8`) approved the layered flow end-to-end against
+the plan and against §4.1 of this report.
+
+### 5.1 Open §4.2 questions — still open
+
+The four UX questions in §4.2 remain unanswered because they require
+a human at MetaMask:
+
+1. Wallet on the wrong chain (e.g. Sepolia) — what does MetaMask do
+   when the dapp issues `eth_sendTransaction` for chain `0xf22f`?
+2. Wallet without studionet configured — does
+   `wallet_addEthereumChain` produce a clean popup, or does MetaMask
+   block the unknown RPC?
+3. Confirmation copy — what does the actual MetaMask review screen
+   show for a `submit_action_check` invocation?
+4. Receipt timing — gap between MetaMask broadcast and the
+   `/api/checks` row appearing.
+
+The harness for these questions is preserved:
+
+- `src/app/phase-b-poc/page.tsx` (banner: "Internal feasibility tool.
+  Delete before public deploy.")
+- `scripts/phase-b-rpc-probe.mjs` (Node EIP-1193 fake — useful for
+  reproducing the bare-Address vs object failure mode without a
+  browser).
+
+Both will be deleted (Task 12 of the implementation plan) once a
+human walks the four scenarios on `/phase-b-poc` and `/`, and pastes
+the findings. Until then, *do not deploy publicly* — the
+non-studionet code path has not been observed.
+
+
