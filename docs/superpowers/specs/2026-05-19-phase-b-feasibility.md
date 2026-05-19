@@ -528,17 +528,13 @@ a human at MetaMask:
 4. Receipt timing — gap between MetaMask broadcast and the
    `/api/checks` row appearing.
 
-The harness for these questions is preserved:
-
-- `src/app/phase-b-poc/page.tsx` (banner: "Internal feasibility tool.
-  Delete before public deploy.")
-- `scripts/phase-b-rpc-probe.mjs` (Node EIP-1193 fake — useful for
-  reproducing the bare-Address vs object failure mode without a
-  browser).
-
-Both will be deleted (Task 12 of the implementation plan) once a
-human walks the four scenarios on `/phase-b-poc` and `/`, and pastes
-the findings. Until then, *do not deploy publicly* — the
-non-studionet code path has not been observed.
+The dedicated harness route (`src/app/phase-b-poc/page.tsx`) and the
+Node EIP-1193 probe (`scripts/phase-b-rpc-probe.mjs`) were retired
+once the production form at `/` was wired through the same browser
+flow (Task 7, commit `4b61e48`). All four scenarios above can be
+reproduced by submitting the form on `/` with the wallet placed in
+the relevant state. Until those scenarios are walked and recorded,
+*do not deploy publicly* — the non-studionet code path has not been
+observed.
 
 
