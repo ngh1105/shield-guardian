@@ -863,3 +863,36 @@
     gap: 10px;
   }
 }
+
+.confirmationCard {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(18, 21, 26, 0.94), rgba(12, 14, 18, 0.92));
+  padding: 1rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: var(--ink);
+}
+
+.confirmationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.confirmationList strong {
+  color: var(--ink);
+  margin-right: 0.4rem;
+}
+
+.confirmationHint {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
