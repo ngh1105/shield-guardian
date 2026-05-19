@@ -45,7 +45,36 @@ export default function PhaseBPoC() {
   async function attemptWrite() {
     setOutput("Running write...");
     try {
-      throw new Error("not implemented");
+      if (typeof window === "undefined" || !window.ethereum) {
+        throw new Error("No window.ethereum (install MetaMask).");
+      }
+      const accounts = (await window.ethereum.request({
+        method: "eth_requestAccounts",
+      })) as Address[];
+      const account = accounts[0];
+      if (!account) throw new Error("Wallet returned no account.");
+
+      const client = createClient({
+        account,
+        chain: studionet,
+        provider: window.ethereum as never,
+      });
+
+      const txHash = await client.writeContract({
+        account: account as never,
+        address: process.env.NEXT_PUBLIC_PHASE_B_CONTRACT as Address,
+        functionName: "submit_action_check",
+        args: [
+          "approve",
+          "PhaseBPoC",
+          "https://example.test",
+          "Phase B feasibility write probe.",
+          "User-signed via MetaMask.",
+        ],
+        value: BigInt(0),
+      });
+
+      setOutput(`WRITE OK: ${txHash}`);
     } catch (error) {
       setOutput(
         error instanceof Error
