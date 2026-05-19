@@ -1,8 +1,3 @@
-import type {
-  ShieldVerdictRequest,
-  ShieldVerdictResponse,
-} from "@/features/shield/types";
-
 export type GenLayerCheck = {
   action_type: string;
   challenge_count: number;
@@ -42,9 +37,3 @@ export type GenLayerVerdictMetadata = {
   transactionHash?: string;
 };
 
-export type GenLayerVerdictAdapter = {
-  submitVerdictRequest(
-    request: ShieldVerdictRequest,
-    options?: { claimedRequester?: string },
-  ): Promise<ShieldVerdictResponse>;
-};

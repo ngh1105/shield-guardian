@@ -4,37 +4,8 @@ import { CalldataAddress } from "genlayer-js/types";
 import type { Address } from "viem";
 import { hexToBytes } from "viem";
 
-import type { ShieldVerdictRequest } from "@/features/shield/types";
-
-import { createCliGenLayerAdapter } from "./genlayer/cli-adapter";
-import { getClientMode, getContractAddress, hasSdkConfig } from "./genlayer/config";
-import { createSdkGenLayerAdapter } from "./genlayer/sdk-adapter";
-import type { GenLayerCheck, GenLayerVerdictAdapter } from "./genlayer/types";
-
-function createGenLayerAdapter(): GenLayerVerdictAdapter {
-  const mode = getClientMode();
-
-  if (mode === "cli") {
-    return createCliGenLayerAdapter();
-  }
-
-  if (mode === "sdk") {
-    return createSdkGenLayerAdapter();
-  }
-
-  if (hasSdkConfig()) {
-    return createSdkGenLayerAdapter();
-  }
-
-  return createCliGenLayerAdapter();
-}
-
-export async function submitVerdictRequest(
-  request: ShieldVerdictRequest,
-  options?: { claimedRequester?: string },
-) {
-  return createGenLayerAdapter().submitVerdictRequest(request, options);
-}
+import { getContractAddress } from "./genlayer/config";
+import type { GenLayerCheck } from "./genlayer/types";
 
 function getReadOnlyClient() {
   return createClient({ chain: studionet });
