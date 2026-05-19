@@ -85,6 +85,9 @@ export default function PhaseBPoC() {
 
   return (
     <main style={{ padding: "2rem", fontFamily: "system-ui" }}>
+      <p style={{ background: "#592b2b", color: "#fff", padding: "0.5rem" }}>
+        Internal feasibility tool. Delete before public deploy.
+      </p>
       <h1>Phase B Feasibility PoC</h1>
       <p>Tests user-signed reads/writes against the Phase A contract.</p>
       <button onClick={attemptRead} type="button">
