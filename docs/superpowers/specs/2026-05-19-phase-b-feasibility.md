@@ -259,3 +259,230 @@ remaining unknowns are runtime-feasibility (does MetaMask actually
 accept and broadcast the unsigned tx the SDK builds?) and UX (what does
 the signing prompt show?), which Tasks 2 and 3 of the investigation
 plan resolve.
+
+## 2. Runtime probe — read path
+
+A browser-pinned MetaMask test is out of scope for this controller, so
+runtime feasibility was probed with `scripts/phase-b-rpc-probe.mjs`,
+a Node script that:
+
+1. Builds a viem `LocalAccount` from `GENLAYER_PRIVATE_KEY`.
+2. Wraps the account in a `fakeProvider` that exposes the EIP-1193
+   `request({method, params})` shape and routes the six
+   `PROVIDER_METHODS` to either `walletClient.sendTransaction` /
+   `signTransaction` / `signMessage` / `signTypedData` or to a static
+   chain-id reply.
+3. Constructs a genlayer-js client with that fakeProvider.
+4. Drives `client.readContract` and `client.writeContract` against the
+   deployed Phase A contract on studionet.
+
+The probe is the closest non-browser equivalent to MetaMask: same SDK
+build, same chain config, same `config.provider` slot, same six methods
+the wallet would receive.
+
+### 2.1 Read result
+
+```text
+[probe] account=0xD12e272d9b464B5287c50307321c1bB1f6092517
+[probe] contract=0x878b7E60d9b6afD46d7B2981003dd5f2a6871286
+[probe] chain id=61999 rpc=https://studio.genlayer.com/api
+
+[probe] === READ get_overview ===
+READ OK: {"check_count":6,"current_epoch":0,"dangerous":1,"safe":4,"weird":1}
+```
+
+`client.readContract({ functionName: "get_overview", args: [] })`
+returned live state from the deployed contract. The decoded payload is
+the same shape `src/lib/genlayer-client.ts:readOverview` already
+returns through the LocalAccount path, confirming that the
+provider-mode transport gets reads to studionet without going through
+the EIP-1193 signing methods (reads bypass `PROVIDER_METHODS` and fall
+to the JSON-RPC `fetch` branch — no wallet prompt, no signature).
+
+The read passes regardless of how `config.account` is shaped, because
+`PROVIDER_METHODS` only intercepts signing/account methods. So Phase B
+will not prompt MetaMask for read calls — the user only sees the
+wallet for state-changing actions, which matches the desired UX.
+
+## 3. Runtime probe — write path
+
+### 3.1 Correct invocation shape
+
+The static analysis in §1 captured the gating condition correctly:
+provider-mode signing is active only when `typeof config.account !==
+"object"`. The empirically-required shape, derived from getting the
+probe to green, is:
+
+```ts
+const client = createClient({
+  account: walletAddress,        // bare 0x-prefixed Address string
+  chain: studionet,
+  provider: injectedProvider,    // window.ethereum or equivalent
+});
+
+await client.writeContract({
+  // NO `account` field here — let the SDK use client.account
+  address: contractAddress,
+  functionName: "...",
+  args: [...],
+  value: 0n,
+});
+```
+
+Two non-obvious requirements that the static read of §1 implied but
+did not call out explicitly:
+
+1. **`config.account` must be a bare `Address` string.** Passing
+   `{address, type: "json-rpc"}` (the `JsonRpcAccount` shape that
+   viem itself produces internally) trips the
+   `typeof config.account !== "object"` check in
+   `getCustomTransportConfig` (`index.js:2378`) — `isAddress` becomes
+   `false`, the `PROVIDER_METHODS` branch is skipped, and
+   `eth_sendTransaction` is sent directly to the studionet JSON-RPC
+   endpoint, which rejects it with `Method not found:
+   eth_sendTransaction`.
+2. **Do not pass `account` to `writeContract`.** When `account` is
+   omitted, the SDK uses `client.account` (`index.js:680` — `const
+   senderAccount = account || client.account`), which viem has
+   normalized from the bare Address into a `JsonRpcAccount` with a
+   defined `.address`. Passing the raw Address string back into
+   `writeContract` makes `validatedSenderAccount.address` be
+   `undefined` (because `validateAccount` is a no-op pass-through —
+   `index.js:874-881`), which crashes downstream with `Address
+   "undefined" is invalid`.
+
+The per-call shape in `src/lib/genlayer/sdk-adapter.ts` (which writes
+through a LocalAccount and explicitly passes `account`) is therefore
+NOT the right template for Phase B. Phase B needs a separate
+provider-mode adapter that constructs the client with a bare Address
+and lets `client.account` propagate.
+
+### 3.2 Write result
+
+After applying the shape above, the probe wrote successfully:
+
+```text
+[probe] === WRITE submit_action_check ===
+WRITE OK txHash: 0x5f34aee8d2e79e5f9bbaf92c060a8dd926e3b2ae1064f46bb29be0e8cefd44f3
+
+[probe] === RPC methods invoked ===
+  eth_sendTransaction (params=1)
+```
+
+The fakeProvider's `request()` was invoked exactly once, with method
+`eth_sendTransaction` and a single param object. The SDK built the
+unsigned transaction (legacy type `0x0`, `to` = consensus main contract
+`0xb727...e575`, `data` = encoded `submit_action_check` calldata,
+`from` = our address, `value: 0x0`, plus gas / nonce / chainId), handed
+it off to the provider, the provider's wrapped `walletClient` signed
+and broadcast it via the studionet RPC, and the resulting EVM tx hash
+flowed back. Because `studionet.isStudio === true`,
+`_sendTransaction` returned the EVM hash directly without trying to
+extract a GenLayer txId from logs (`index.js:1176-1178`).
+
+This is the exact code path MetaMask would drive in the browser. The
+only difference is that MetaMask shows a confirmation UI before
+calling `walletClient.sendTransaction` equivalent — the SDK's contract
+with the provider is identical.
+
+### 3.3 What the wallet will see
+
+From the formattedRequest in `_sendTransaction` (`index.js:1160-1171`),
+the prompt MetaMask gets is a contract-interaction transaction whose:
+
+- `to` is the consensus main contract address
+  (`0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575`), NOT the Phase A
+  contract address (`0x878b...1286`). The Phase A contract address is
+  embedded inside the encoded calldata as `recipient` of
+  `addTransaction`, so the wallet's "Interacting with" hint will read
+  the consensus contract, not the policy court.
+- `data` is the ABI-encoded `addTransaction(_sender, _recipient,
+  _numOfInitialValidators, _maxRotations, _txData[, _validUntil])`
+  call, with `_txData` being the GenLayer-serialized
+  `submit_action_check(...)` calldata. There is no
+  human-readable function name in the wallet view — MetaMask will
+  show "Contract interaction" and a hex blob.
+- `value` is `0x0`.
+- `chainId` is `0xf22f` (61999).
+
+Because `assertChainMatch` short-circuits on `isStudio`
+(`index.js:2362-2364`), the SDK does NOT call
+`wallet_switchEthereumChain` or `wallet_addEthereumChain` before
+sending. If the user's MetaMask is on a different chain, the wallet
+itself decides whether to reject, prompt-for-switch, or silently sign
+on the wrong chain. The browser PoC at `src/app/phase-b-poc/page.tsx`
+is the artifact that needs to be exercised by a human to record what
+MetaMask actually does in those cases — the probe cannot answer that.
+
+### 3.4 Provider methods exercised
+
+Across the green probe run, only one EIP-1193 method reached the
+provider: `eth_sendTransaction`. `eth_requestAccounts`,
+`eth_chainId`, and the signing methods were all routed elsewhere
+(viem's internal account materialisation, the `isStudio`
+short-circuit in `assertChainMatch`, etc.). For studionet writes, the
+wallet will be asked to handle exactly one method per submission.
+
+## 4. Recommendation
+
+**Verdict: GREEN.** Phase B (user-signed transactions via
+MetaMask / EIP-1193 wallets) is feasible on the current
+`genlayer-js@1.1.8` build against studionet, with no SDK patches.
+The runtime probe replicated the browser code path end-to-end and
+got a successful broadcast.
+
+### 4.1 Required Phase B work, scoped from the findings
+
+1. **A second SDK adapter** alongside `src/lib/genlayer/sdk-adapter.ts`
+   that builds the client with `account: <Address string>` and
+   `provider: window.ethereum`, omits `account` on every
+   `writeContract` call, and exposes the same surface (`submit_action_check`,
+   `submit_action_check_for`, etc.) the existing LocalAccount adapter
+   does. The two adapters can share the `CalldataAddress` wrapping logic.
+2. **Connect-wallet UI surface** that obtains the `Address` from
+   `eth_requestAccounts` once and persists it for the lifetime of the
+   page. Existing components (`ConnectButton`, wallet identity in
+   `src/components/...`) already do most of this; Phase B just needs
+   to thread the address into the new adapter.
+3. **Pre-flight chain check.** Because `assertChainMatch` no-ops on
+   studionet, the dapp must enforce the chain itself: read
+   `wallet_chainId`, and if it is not `0xf22f`, call
+   `wallet_addEthereumChain` (chain id 61999, RPC
+   `https://studio.genlayer.com/api`, native currency GEN/18) and then
+   `wallet_switchEthereumChain`. This is `< 30` lines but it is
+   load-bearing — without it the wallet may sign on the wrong chain.
+4. **Hex-blob mitigation.** The wallet will show "Contract
+   interaction" against the consensus contract, with no
+   human-readable function. Phase B should ship a parallel UI panel
+   ("You are about to: approve action X for site Y") rendered from
+   the dapp's own state, so the user has context the wallet does not.
+   Any deeper humanizer (decoding the wrapped GenLayer calldata into
+   an ABI-style summary) is a non-blocker enhancement.
+
+### 4.2 Open questions the probe cannot answer
+
+These need a human in front of MetaMask, using
+`src/app/phase-b-poc/page.tsx` as the harness:
+
+- **Network mismatch behaviour.** With wallet on (e.g.) Sepolia, what
+  does MetaMask do when the dapp issues `eth_sendTransaction` for
+  chain `0xf22f`? Reject, prompt, or silently sign?
+- **Add-chain UX.** If the user has never seen studionet in their
+  wallet, does `wallet_addEthereumChain` produce a clean popup with
+  the GenLayer brand info, or does MetaMask block the unknown RPC?
+- **Confirmation copy.** Take a screenshot of the actual confirmation
+  prompt for `submit_action_check` — what does the user actually see
+  before clicking Confirm?
+- **Receipt timing.** Studionet returns the EVM hash fast (no receipt
+  wait), but the GenLayer txId may not be queryable for several
+  seconds. Phase B's UI needs to decide whether to optimistically
+  show "submitted" or block on a follow-up query.
+
+### 4.3 Static / runtime gap closed
+
+The static read in §1 was correct on the gating condition but did not
+make the *bare-Address-string* requirement explicit, which cost a debug
+cycle. This report supersedes that omission: future Phase B work
+should treat §3.1 as the canonical client-construction shape, not the
+inferred-from-types shape.
+

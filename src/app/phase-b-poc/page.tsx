@@ -61,7 +61,6 @@ export default function PhaseBPoC() {
       });
 
       const txHash = await client.writeContract({
-        account: account as never,
         address: process.env.NEXT_PUBLIC_PHASE_B_CONTRACT as Address,
         functionName: "submit_action_check",
         args: [
