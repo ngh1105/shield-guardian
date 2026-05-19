@@ -3,11 +3,9 @@ import { NextResponse } from "next/server";
 import { getShieldVerdict } from "@/features/shield/lib/mock-verdict";
 import { extractHostname } from "@/features/shield/lib/url-safety";
 import type { ShieldVerdictRequest } from "@/features/shield/types";
-import { submitVerdictRequest } from "@/lib/genlayer-client";
 
 const ALLOWED_ACTION_TYPES = new Set(["sign", "approve", "bridge", "claim"]);
 const DEMO_MODE_HEADER = "x-shield-demo-mode";
-const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 function parseUsdNumber(value: unknown) {
   const parsed = Number(value ?? 0);
@@ -63,26 +61,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const rawClaimedRequester = (payload as { claimedRequester?: unknown })
-    .claimedRequester;
-  let claimedRequester: string | undefined;
-  if (
-    rawClaimedRequester !== undefined &&
-    rawClaimedRequester !== null &&
-    rawClaimedRequester !== ""
-  ) {
-    if (
-      typeof rawClaimedRequester !== "string" ||
-      !ETH_ADDRESS_REGEX.test(rawClaimedRequester)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid claimedRequester address." },
-        { status: 400 },
-      );
-    }
-    claimedRequester = rawClaimedRequester;
-  }
-
   const normalizedPayload: ShieldVerdictRequest = {
     actionType: payload.actionType,
     protocol: payload.protocol?.trim() ?? "",
@@ -93,27 +71,19 @@ export async function POST(request: Request) {
     gasCostUsd,
   };
 
-  let verdict;
+  const useDemo = shouldUseDemoMode(request);
 
-  try {
-    verdict = shouldUseDemoMode(request)
-      ? getShieldVerdict(normalizedPayload)
-      : await submitVerdictRequest(normalizedPayload, { claimedRequester });
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.includes("GENLAYER_CONTRACT_ADDRESS is not set")
-    ) {
-      verdict = getShieldVerdict(normalizedPayload);
-    } else {
-      return NextResponse.json(
-        {
-          error: error instanceof Error ? error.message : "GenLayer request failed.",
-        },
-        { status: 502 },
-      );
-    }
+  if (!useDemo) {
+    return NextResponse.json(
+      {
+        error:
+          "Live verdicts now sign in the browser via the wallet. Send the demo header for mock verdicts, or run the new browser flow.",
+      },
+      { status: 410 },
+    );
   }
+
+  const verdict = getShieldVerdict(normalizedPayload);
 
   return NextResponse.json({
     request: normalizedPayload,
