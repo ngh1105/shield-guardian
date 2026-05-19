@@ -37,9 +37,8 @@ port, so `http://localhost:3000` resolves to the host permission pattern
 
 The web app reads the connected wallet from `window.ethereum` (EIP-1193) via
 `src/features/wallet/wallet-context.tsx`. The address is forwarded to the
-verdict API as `claimedRequester`. The server still signs the GenLayer
-transaction with `GENLAYER_PRIVATE_KEY` — wallet connection is identity-only
-in Phase A.
+verdict API as `claimedRequester`. Transactions are signed in the browser via
+MetaMask — the server no longer holds a private key.
 
 The contract stores `claimed_requester` separately from `requester` (the
 on-chain message sender), so per-wallet history is honest:
@@ -58,12 +57,10 @@ Use the fixed Studionet contract:
 ```env
 GENLAYER_RPC_URL=https://studio.genlayer.com/api
 GENLAYER_CONTRACT_ADDRESS=0x0B6C673eBb242fb171291bc4ADCCa9785cDDa65f
-GENLAYER_ACCOUNT_NAME=shieldtest
 ```
 
-The current server integration shells out to the installed `genlayer` CLI. The
-named account must exist locally and be unlocked before live verdict requests
-can be submitted.
+Connect a MetaMask wallet on Studionet (chain id 61999). The dapp signs
+transactions in the browser — no server-side private key is required.
 
 ## Contract Surface
 
