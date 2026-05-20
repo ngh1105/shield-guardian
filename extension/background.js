@@ -17,6 +17,10 @@ import {
   pushRecent,
   setPending,
 } from "./lib/intercept-store.js";
+import {
+  pendingToSendTarget,
+  validateDecisionChoice,
+} from "./lib/decision-routing.mjs";
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
 
@@ -264,13 +268,38 @@ async function interceptRequest({ nonce, packet, tabId, frameId }) {
   return { ok: true, nonce, verdict, source };
 }
 
-async function recordDecision({ nonce, choice }) {
-  if (!nonce || (choice !== "proceed" && choice !== "cancel")) {
-    throw new Error("Bad decision payload.");
+async function routeOverlayDecision({ nonce, choice }) {
+  if (typeof nonce !== "string" || nonce.length === 0) {
+    throw new Error("Missing intercept nonce.");
+  }
+  if (!validateDecisionChoice(choice)) {
+    throw new Error("Decision must be 'proceed' or 'cancel'.");
   }
   const entry = await getPending(nonce);
+  if (!entry) {
+    throw new Error("No pending intercept matches this nonce.");
+  }
+  const target = pendingToSendTarget(entry);
+  if (!target) {
+    throw new Error("Pending intercept is missing a tab target.");
+  }
+
   await clearPending(nonce);
-  return { ok: true, nonce, choice, packet: entry?.packet ?? null, verdict: entry?.verdict ?? null };
+
+  const options = target.frameId !== undefined ? { frameId: target.frameId } : undefined;
+  try {
+    await chrome.tabs.sendMessage(
+      target.tabId,
+      { type: "SHIELD_OVERLAY_DECISION", nonce, choice },
+      options,
+    );
+  } catch (error) {
+    throw new Error(
+      `Unable to forward decision to tab ${target.tabId}: ${error?.message ?? error}`,
+    );
+  }
+
+  return { ok: true, nonce, choice };
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -333,10 +362,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === "SHIELD_INTERCEPT_DECISION") {
+  if (message.type === "SHIELD_OVERLAY_DECISION") {
     void (async () => {
       try {
-        sendResponse(await recordDecision({ nonce: message.nonce, choice: message.choice }));
+        sendResponse(await routeOverlayDecision({ nonce: message.nonce, choice: message.choice }));
       } catch (error) {
         sendResponse({ ok: false, error: asErrorMessage(error) });
       }
