@@ -6,11 +6,13 @@ import type { Address } from "viem";
 import { ActivityHistory } from "@/features/shield/components/activity-history";
 import { ConfirmationPanel } from "@/features/shield/components/confirmation-panel";
 import { OverviewStats } from "@/features/shield/components/overview-stats";
+import { VerdictPolicyActions } from "@/features/shield/components/verdict-policy-actions";
 import {
   INITIAL_FORM,
   SHIELD_EXAMPLES,
 } from "@/features/shield/data/examples";
 import { requestShieldVerdict } from "@/features/shield/lib/request-verdict";
+import { usePolicyCourtActions } from "@/features/shield/lib/use-policy-court-actions";
 import { useShieldVerdict } from "@/features/shield/lib/use-shield-verdict";
 import styles from "@/features/shield/shield-page.module.css";
 import type {
@@ -148,6 +150,11 @@ export function ShieldPage() {
   const [isPending, startTransition] = useTransition();
   const wallet = useWallet();
   const verdict = useShieldVerdict();
+  const policyActions = usePolicyCourtActions({
+    walletAddress: wallet.address,
+    status: wallet.status,
+    bumpInvalidation: wallet.bumpInvalidation,
+  });
 
   const provenanceRows = result ? getProvenanceRows(result) : [];
 
@@ -559,6 +566,16 @@ export function ShieldPage() {
                   <p>{result.briefing}</p>
                 </div>
 
+                {result.provenance?.source === "genlayer" &&
+                result.provenance.checkId ? (
+                  <VerdictPolicyActions
+                    actions={policyActions}
+                    result={result}
+                    walletAddress={wallet.address}
+                    walletStatus={wallet.status}
+                  />
+                ) : null}
+
                 <div className={styles.verdictActions}>
                   <button className={styles.abortButton} type="button">
                     Abort Transaction
@@ -623,7 +640,7 @@ export function ShieldPage() {
 
         <OverviewStats />
 
-        <ActivityHistory />
+        <ActivityHistory actions={policyActions} />
       </section>
 
       <section className={styles.section} id="coverage">

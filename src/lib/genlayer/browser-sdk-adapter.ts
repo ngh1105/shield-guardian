@@ -123,3 +123,86 @@ export async function submitBrowserVerdictRequest(
     transactionHash,
   });
 }
+
+export type ChallengeWriteResult = {
+  transactionHash: string;
+  check: GenLayerCheck;
+};
+
+export async function challengeBrowserVerdict(
+  checkId: number,
+  rationale: string,
+  deps: BrowserAdapterDeps,
+): Promise<ChallengeWriteResult> {
+  const contractAddress = getContractAddress() as Address;
+
+  const client = createClient({
+    account: deps.walletAddress,
+    chain: studionet,
+    provider: deps.provider as never,
+  });
+
+  const transactionHash = await client.writeContract({
+    address: contractAddress,
+    functionName: "challenge_verdict",
+    args: [checkId, rationale],
+    value: BigInt(0),
+  });
+
+  await client.waitForTransactionReceipt({
+    hash: transactionHash,
+    status: TransactionStatus.ACCEPTED,
+    interval: 1_000,
+    retries: 120,
+  });
+
+  const check = (await client.readContract({
+    address: contractAddress,
+    functionName: "get_check",
+    args: [checkId],
+  })) as GenLayerCheck;
+
+  return { transactionHash, check };
+}
+
+export type LossReportWriteResult = {
+  transactionHash: string;
+  check: GenLayerCheck;
+};
+
+export async function reportBrowserLoss(
+  checkId: number,
+  txHash: string,
+  lossSummary: string,
+  deps: BrowserAdapterDeps,
+): Promise<LossReportWriteResult> {
+  const contractAddress = getContractAddress() as Address;
+
+  const client = createClient({
+    account: deps.walletAddress,
+    chain: studionet,
+    provider: deps.provider as never,
+  });
+
+  const transactionHash = await client.writeContract({
+    address: contractAddress,
+    functionName: "report_loss",
+    args: [checkId, txHash, lossSummary],
+    value: BigInt(0),
+  });
+
+  await client.waitForTransactionReceipt({
+    hash: transactionHash,
+    status: TransactionStatus.ACCEPTED,
+    interval: 1_000,
+    retries: 120,
+  });
+
+  const check = (await client.readContract({
+    address: contractAddress,
+    functionName: "get_check",
+    args: [checkId],
+  })) as GenLayerCheck;
+
+  return { transactionHash, check };
+}

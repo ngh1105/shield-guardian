@@ -690,7 +690,7 @@
 .tableHeader,
 .tableRow {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1.4fr 0.7fr;
+  grid-template-columns: 0.95fr 0.85fr 1.4fr 0.6fr 0.85fr 1.2fr;
   gap: 12px;
   align-items: center;
   padding: 14px 16px;
@@ -895,4 +895,195 @@
   font-size: 0.72rem;
   color: var(--muted);
   margin-top: 0.2rem;
+}
+
+.policyActionBlock {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 245, 212, 0.04);
+}
+
+.policyActionHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.policyActionHead strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.95rem;
+}
+
+.policyActionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.policyStatusInfo,
+.policyStatusError,
+.policyStatusWarning {
+  margin: 0;
+  font-size: 0.84rem;
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.04em;
+}
+
+.policyStatusInfo {
+  color: var(--cyan);
+}
+
+.policyStatusError {
+  color: var(--danger);
+}
+
+.policyStatusWarning {
+  color: var(--weird);
+}
+
+.policyDialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 6, 9, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.policyDialog {
+  display: grid;
+  gap: 14px;
+  width: min(520px, 100%);
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.98), rgba(12, 14, 18, 0.98));
+  color: var(--ink);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.policyDialogHeader {
+  display: grid;
+  gap: 6px;
+}
+
+.policyDialogHeader h3 {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.policyDialogField {
+  display: grid;
+  gap: 6px;
+}
+
+.policyDialogField > span:first-child {
+  color: #cbd2db;
+  font-size: 0.84rem;
+}
+
+.policyDialogField input,
+.policyDialogField select,
+.policyDialogField textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--ink);
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+.policyDialogField input:focus,
+.policyDialogField select:focus,
+.policyDialogField textarea:focus {
+  outline: 2px solid rgba(0, 245, 212, 0.2);
+  border-color: rgba(0, 245, 212, 0.45);
+}
+
+.policyDialogHelper {
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.policyDialogWarning {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 203, 102, 0.32);
+  border-radius: 4px;
+  background: rgba(255, 203, 102, 0.08);
+  color: #f0d496;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.coverageCell {
+  display: grid;
+  gap: 4px;
+}
+
+.coverageStatus {
+  color: #dce8f1;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.coverageMeta {
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rowActionButton {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rowActionButton:hover:not(:disabled) {
+  border-color: rgba(0, 245, 212, 0.32);
+  background: rgba(0, 245, 212, 0.06);
+}
+
+.rowActionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.rowStatus {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
 }

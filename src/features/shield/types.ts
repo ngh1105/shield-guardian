@@ -12,6 +12,12 @@ export type ShieldVerdictProvenance = {
   coverageStatus?: string;
   createdEpoch?: number;
   lastReviewEpoch?: number;
+  requester?: string;
+  claimedRequester?: string;
+  challengeCount?: number;
+  lossReportTxHash?: string;
+  note?: string;
+  rawVerdict?: "safe" | "weird" | "dangerous";
 };
 
 export type ShieldVerdictRequest = {

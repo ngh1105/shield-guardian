@@ -15,11 +15,18 @@ export type OverviewSnapshot = {
 export type CheckRow = {
   checkId: number;
   verdict: "SAFE" | "WEIRD" | "DANGEROUS";
+  rawVerdict: "safe" | "weird" | "dangerous";
   protocol: string;
   actionType: string;
   summary: string;
   website: string;
   createdEpoch: number;
+  requester: string;
+  claimedRequester: string;
+  coverageStatus: string;
+  lossReportTxHash: string;
+  note: string;
+  challengeCount: number;
 };
 
 type FetchState<T> = {
@@ -38,11 +45,18 @@ function mapCheckRow(check: GenLayerCheck): CheckRow {
   return {
     checkId: check.check_id,
     verdict: mapVerdict(check.verdict),
+    rawVerdict: check.verdict,
     protocol: check.protocol || "Unknown",
     actionType: check.action_type,
     summary: check.summary,
     website: check.website,
     createdEpoch: check.created_epoch,
+    requester: check.requester,
+    claimedRequester: check.claimed_requester,
+    coverageStatus: check.coverage_status,
+    lossReportTxHash: check.loss_report_tx_hash,
+    note: check.note,
+    challengeCount: check.challenge_count,
   };
 }
 
