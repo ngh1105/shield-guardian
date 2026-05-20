@@ -477,11 +477,12 @@ export function ShieldPage() {
                   disabled={
                     isPending ||
                     verdict.state.phase === "preflight" ||
-                    verdict.state.phase === "signing"
+                    verdict.state.phase === "signing" ||
+                    verdict.state.phase === "awaiting-receipt"
                   }
                   type="submit"
                 >
-                  {isPending || verdict.state.phase === "preflight" || verdict.state.phase === "signing"
+                  {isPending || verdict.state.phase === "preflight" || verdict.state.phase === "signing" || verdict.state.phase === "awaiting-receipt"
                     ? "Working with wallet..."
                     : "Run Analysis"}
                 </button>
@@ -533,6 +534,27 @@ export function ShieldPage() {
                 onConfirm={() => undefined}
                 onCancel={verdict.cancelVerdict}
               />
+            ) : null}
+
+            {verdict.state.phase === "awaiting-receipt" && verdict.state.request ? (
+              <div className={styles.confirmationCard}>
+                <p className={styles.metricLabel}>Waiting for consensus</p>
+                <h3>Transaction broadcast</h3>
+                <p>
+                  GenLayer policy court is producing a verdict. This usually
+                  takes a few seconds but can take up to two minutes on a
+                  slow network.
+                </p>
+                {verdict.state.transactionHash ? (
+                  <p className={styles.confirmationHint}>
+                    Tx&nbsp;
+                    <code>
+                      {verdict.state.transactionHash.slice(0, 10)}...
+                      {verdict.state.transactionHash.slice(-6)}
+                    </code>
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             {verdict.state.phase === "error" ? (

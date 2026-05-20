@@ -16,6 +16,7 @@ type ShieldVerdictPhase =
   | "preflight"
   | "awaiting-confirm"
   | "signing"
+  | "awaiting-receipt"
   | "done"
   | "error";
 
@@ -24,6 +25,7 @@ type ShieldVerdictState = {
   request: ShieldVerdictRequest | null;
   result: ShieldVerdictResponse | null;
   error: string | null;
+  transactionHash: string | null;
 };
 
 const INITIAL: ShieldVerdictState = {
@@ -31,6 +33,7 @@ const INITIAL: ShieldVerdictState = {
   request: null,
   result: null,
   error: null,
+  transactionHash: null,
 };
 
 function pickError(error: unknown) {
@@ -51,11 +54,12 @@ export function useShieldVerdict() {
           request,
           result: null,
           error: "MetaMask is not available in this browser.",
+          transactionHash: null,
         });
         return;
       }
 
-      setState({ phase: "preflight", request, result: null, error: null });
+      setState({ phase: "preflight", request, result: null, error: null, transactionHash: null });
 
       try {
         await ensureStudionet(window.ethereum);
@@ -66,6 +70,7 @@ export function useShieldVerdict() {
           request,
           result: null,
           error: pickError(error),
+          transactionHash: null,
         });
       }
     },
@@ -78,20 +83,34 @@ export function useShieldVerdict() {
       if (!request) return;
       if (typeof window === "undefined" || !window.ethereum) return;
 
-      setState((prev) => ({ ...prev, phase: "signing", error: null }));
+      setState((prev) => ({ ...prev, phase: "signing", error: null, transactionHash: null }));
 
       try {
         const result = await submitBrowserVerdictRequest(request, {
           walletAddress,
           provider: window.ethereum,
+          onBroadcast: (transactionHash) => {
+            setState((prev) => ({
+              ...prev,
+              phase: "awaiting-receipt",
+              transactionHash,
+            }));
+          },
         });
-        setState({ phase: "done", request, result, error: null });
+        setState((prev) => ({
+          phase: "done",
+          request,
+          result,
+          error: null,
+          transactionHash: prev.transactionHash,
+        }));
       } catch (error) {
         setState({
           phase: "error",
           request,
           result: null,
           error: pickError(error),
+          transactionHash: null,
         });
       }
     },

@@ -36,9 +36,13 @@ export type BrowserAdapterDeps = {
   provider: Eip1193Provider;
 };
 
+export type SubmitBrowserVerdictDeps = BrowserAdapterDeps & {
+  onBroadcast?: (transactionHash: string) => void;
+};
+
 export async function submitBrowserVerdictRequest(
   request: ShieldVerdictRequest,
-  deps: BrowserAdapterDeps,
+  deps: SubmitBrowserVerdictDeps,
 ): Promise<ShieldVerdictResponse> {
   const contractAddress = getContractAddress() as Address;
 
@@ -60,6 +64,14 @@ export async function submitBrowserVerdictRequest(
     ],
     value: BigInt(0),
   });
+
+  if (deps.onBroadcast) {
+    try {
+      deps.onBroadcast(transactionHash);
+    } catch {
+      // Don't let a UI handler error abort the verdict; the wait below is what matters.
+    }
+  }
 
   const receipt = (await client.waitForTransactionReceipt({
     hash: transactionHash,
