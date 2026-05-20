@@ -3,11 +3,15 @@
 
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import { ExecutionResult, TransactionStatus } from "genlayer-js/types";
+import { TransactionStatus } from "genlayer-js/types";
 import type { Address } from "viem";
 
 import type { ShieldVerdictRequest, ShieldVerdictResponse } from "@/features/shield/types";
 
+import {
+  isFinishedWithReturn,
+  parseReturnedCheckId,
+} from "./browser-sdk-helpers.mjs";
 import { getContractAddress } from "./config";
 import { mapCheckToVerdict } from "./map-check-to-verdict";
 import type { GenLayerCheck } from "./types";
@@ -15,8 +19,6 @@ import type { GenLayerCheck } from "./types";
 type Eip1193Provider = {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
 };
-
-type GenLayerOverview = { check_count?: number };
 
 type LeaderReceiptResult = string | { payload?: { readable?: string } };
 
@@ -28,38 +30,6 @@ type SdkReceipt = {
     leader_receipt?: Array<{ result?: LeaderReceiptResult }>;
   };
 };
-
-function parseLeaderReceiptResult(result: LeaderReceiptResult | undefined) {
-  if (!result) return undefined;
-  if (typeof result === "string") return result;
-  return result.payload?.readable;
-}
-
-function parseReturnedCheckId(receipt: SdkReceipt) {
-  const readable = receipt.consensus_data?.leader_receipt
-    ?.map((entry) => parseLeaderReceiptResult(entry.result))
-    .find((value) => value);
-  const parsed = Number(readable);
-  if (Number.isInteger(parsed) && parsed > 0) return parsed;
-  if (
-    !receipt.hash &&
-    typeof receipt.result === "number" &&
-    Number.isInteger(receipt.result) &&
-    receipt.result > 0
-  ) {
-    return receipt.result;
-  }
-  return null;
-}
-
-function parseNextCheckId(overview: GenLayerOverview) {
-  const count = Number(overview.check_count);
-  return Number.isInteger(count) && count >= 0 ? count + 1 : null;
-}
-
-function isFinishedWithReturn(receipt: SdkReceipt) {
-  return receipt.txExecutionResultName === ExecutionResult.FINISHED_WITH_RETURN;
-}
 
 export type BrowserAdapterDeps = {
   walletAddress: Address;
@@ -77,13 +47,6 @@ export async function submitBrowserVerdictRequest(
     chain: studionet,
     provider: deps.provider as never,
   });
-
-  const overview = (await client.readContract({
-    address: contractAddress,
-    functionName: "get_overview",
-    args: [],
-  })) as GenLayerOverview;
-  const expectedCheckId = parseNextCheckId(overview);
 
   const transactionHash = await client.writeContract({
     address: contractAddress,
@@ -105,11 +68,19 @@ export async function submitBrowserVerdictRequest(
     retries: 120,
   })) as SdkReceipt;
 
-  const checkId = isFinishedWithReturn(receipt)
-    ? parseReturnedCheckId(receipt)
-    : expectedCheckId;
+  if (!isFinishedWithReturn(receipt)) {
+    throw new Error(
+      "GenLayer policy court did not return a verdict for this submission. The transaction status was " +
+        String(receipt.txExecutionResultName ?? "unknown") +
+        ". Try again in a moment.",
+    );
+  }
+
+  const checkId = parseReturnedCheckId(receipt);
   if (!checkId) {
-    throw new Error("GenLayer SDK did not determine an action check id.");
+    throw new Error(
+      "GenLayer policy court returned a transaction without a parseable check id. Refresh and submit again.",
+    );
   }
 
   const check = (await client.readContract({

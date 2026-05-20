@@ -12,7 +12,7 @@
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:checks": "node scripts/smoke-checks.mjs",
     "smoke:demo": "node scripts/smoke-demo.mjs",
-    "test:extension": "node --test \"extension/**/*.test.mjs\" \"src/features/shield/lib/*.test.mjs\"",
+    "test:extension": "node --test \"extension/**/*.test.mjs\" \"src/features/shield/lib/*.test.mjs\" \"src/lib/genlayer/*.test.mjs\"",
     "verify:demo": "npm run lint && npm run build && npm run smoke:demo",
     "verify:all": "npm run lint && npm run build && npm run check:extension && npm run package:extension && npm run test:extension && npm run smoke:demo"
   },
