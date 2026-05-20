@@ -1,5 +1,7 @@
 /* global chrome */
 
+import { readRecent } from "./lib/intercept-store.js";
+import { buildPrefillUrl } from "./lib/prefill-url.js";
 import {
   clampText,
   createWarningCopy,
@@ -275,6 +277,33 @@ function renderVerdict(record) {
   `;
 }
 
+async function renderRecentIntercepts() {
+  if (!refs.recentIntercepts) return;
+  const list = await readRecent();
+  if (!list.length) {
+    refs.recentIntercepts.innerHTML = `<li class="reason">No intercepts captured yet.</li>`;
+    return;
+  }
+
+  const apiBase = state.connection?.settings?.apiBaseUrl;
+  refs.recentIntercepts.innerHTML = list
+    .map((entry) => {
+      const verdict = entry.verdict?.verdict ?? "UNAVAILABLE";
+      const host = (() => {
+        try { return new URL(entry.packet?.website ?? "").hostname; } catch { return entry.packet?.website ?? ""; }
+      })();
+      const url = buildPrefillUrl(entry.packet ?? {}, apiBase);
+      return `
+        <li class="reason">
+          <strong>${escapeHtml(verdict)}</strong> — ${escapeHtml(entry.packet?.actionType ?? "?")} on ${escapeHtml(host)}
+          <span class="hint">${escapeHtml(formatDateTime(entry.capturedAt))}</span>
+          <a href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open in Shield Guardian</a>
+        </li>
+      `;
+    })
+    .join("");
+}
+
 function formatShortHash(value) {
   if (!value || value.length <= 18) {
     return value || "";
@@ -408,6 +437,7 @@ async function loadInitialState() {
   renderConnection();
   renderTabContext();
   renderVerdict(state.lastVerdict);
+  await renderRecentIntercepts();
 }
 
 async function captureTabContext() {
@@ -444,6 +474,7 @@ async function analyzePacket(event) {
     }
     state.acknowledgement = false;
     renderVerdict(state.lastVerdict);
+    await renderRecentIntercepts();
     renderConnection();
     setStatusNotice("success", "Live verdict received from the Shield API.");
   } catch (error) {
@@ -510,6 +541,7 @@ async function init() {
   refs.resetButton = $("resetButton");
   refs.verdictPanel = $("verdictPanel");
   refs.demoPackets = $("demoPackets");
+  refs.recentIntercepts = document.getElementById("recentIntercepts");
 
   refs.analysisForm.addEventListener("submit", analyzePacket);
   refs.captureTabButton.addEventListener("click", captureTabContext);
