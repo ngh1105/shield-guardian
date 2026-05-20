@@ -1,8 +1,9 @@
 /* global chrome */
-// Classic content script for Chrome MV3. Mirror any change to MESSAGE_TYPES
-// or isAcceptableMessage in extension/content/sg-bridge-core.mjs, which is
-// the testable ESM surface (Chrome MV3 does not expose a "type": "module"
-// knob for content_scripts, so this file inlines the same logic by hand).
+// Classic content script for Chrome MV3. Mirror any change to MESSAGE_TYPES,
+// isAcceptableMessage, or buildOverlayDecisionResponse in
+// extension/content/sg-bridge-core.mjs, which is the testable ESM surface
+// (Chrome MV3 does not expose a "type": "module" knob for content_scripts,
+// so this file inlines the same logic by hand).
 
 (function () {
   if (window.__shieldGuardianBridgeInstalled) return;
@@ -24,6 +25,18 @@
     if (!data || typeof data !== "object") return false;
     if (typeof data.type !== "string" || !VALID_TYPES.has(data.type)) return false;
     return true;
+  }
+
+  function buildOverlayDecisionResponse(message) {
+    if (!message || typeof message !== "object") return null;
+    if (message.type !== "SHIELD_OVERLAY_DECISION") return null;
+    if (typeof message.nonce !== "string" || message.nonce.length === 0) return null;
+    if (typeof message.choice !== "string" || message.choice.length === 0) return null;
+    return {
+      type: MESSAGE_TYPES.INTERCEPT_RES,
+      nonce: message.nonce,
+      choice: message.choice,
+    };
   }
 
   function ensureOverlay(nonce) {
@@ -94,12 +107,9 @@
   });
 
   chrome.runtime.onMessage.addListener((message) => {
-    if (!message || message.type !== "SHIELD_OVERLAY_DECISION") return false;
-    const { nonce, choice } = message;
-    ctx.window.postMessage(
-      { type: MESSAGE_TYPES.INTERCEPT_RES, nonce, choice },
-      ctx.origin,
-    );
+    const response = buildOverlayDecisionResponse(message);
+    if (!response) return false;
+    ctx.window.postMessage(response, ctx.origin);
     removeOverlay();
     return false;
   });

@@ -21,3 +21,15 @@ export function isAcceptableMessage(event, ctx) {
   if (typeof data.type !== "string" || !VALID_TYPES.has(data.type)) return false;
   return true;
 }
+
+export function buildOverlayDecisionResponse(message) {
+  if (!message || typeof message !== "object") return null;
+  if (message.type !== "SHIELD_OVERLAY_DECISION") return null;
+  if (typeof message.nonce !== "string" || message.nonce.length === 0) return null;
+  if (typeof message.choice !== "string" || message.choice.length === 0) return null;
+  return {
+    type: MESSAGE_TYPES.INTERCEPT_RES,
+    nonce: message.nonce,
+    choice: message.choice,
+  };
+}

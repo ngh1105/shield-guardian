@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { isAcceptableMessage, MESSAGE_TYPES } from "./sg-bridge-core.mjs";
+import { isAcceptableMessage, MESSAGE_TYPES, buildOverlayDecisionResponse } from "./sg-bridge-core.mjs";
 
 test("rejects messages from a different window source", () => {
   const fakeWindow = {};
@@ -29,4 +29,57 @@ test("accepts a well-formed intercept request", () => {
     data: { type: MESSAGE_TYPES.INTERCEPT_REQ, nonce: "abc", packet: {} },
   };
   assert.equal(isAcceptableMessage(event, { window: win, origin: "https://example.com" }), true);
+});
+
+test("buildOverlayDecisionResponse rejects null", () => {
+  assert.equal(buildOverlayDecisionResponse(null), null);
+});
+
+test("buildOverlayDecisionResponse rejects wrong message type", () => {
+  assert.equal(
+    buildOverlayDecisionResponse({ type: "SOME_OTHER", nonce: "n", choice: "proceed" }),
+    null,
+  );
+});
+
+test("buildOverlayDecisionResponse rejects missing nonce", () => {
+  assert.equal(
+    buildOverlayDecisionResponse({ type: "SHIELD_OVERLAY_DECISION", choice: "proceed" }),
+    null,
+  );
+});
+
+test("buildOverlayDecisionResponse rejects empty-string nonce", () => {
+  assert.equal(
+    buildOverlayDecisionResponse({ type: "SHIELD_OVERLAY_DECISION", nonce: "", choice: "proceed" }),
+    null,
+  );
+});
+
+test("buildOverlayDecisionResponse rejects non-string nonce", () => {
+  assert.equal(
+    buildOverlayDecisionResponse({ type: "SHIELD_OVERLAY_DECISION", nonce: 42, choice: "proceed" }),
+    null,
+  );
+});
+
+test("buildOverlayDecisionResponse rejects missing choice", () => {
+  assert.equal(
+    buildOverlayDecisionResponse({ type: "SHIELD_OVERLAY_DECISION", nonce: "abc" }),
+    null,
+  );
+});
+
+test("buildOverlayDecisionResponse forwards proceed", () => {
+  assert.deepEqual(
+    buildOverlayDecisionResponse({ type: "SHIELD_OVERLAY_DECISION", nonce: "abc", choice: "proceed" }),
+    { type: MESSAGE_TYPES.INTERCEPT_RES, nonce: "abc", choice: "proceed" },
+  );
+});
+
+test("buildOverlayDecisionResponse forwards cancel", () => {
+  assert.deepEqual(
+    buildOverlayDecisionResponse({ type: "SHIELD_OVERLAY_DECISION", nonce: "xyz", choice: "cancel" }),
+    { type: MESSAGE_TYPES.INTERCEPT_RES, nonce: "xyz", choice: "cancel" },
+  );
 });
