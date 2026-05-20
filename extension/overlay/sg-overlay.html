@@ -1,1 +1,19 @@
-<!doctype html><meta charset="utf-8"><title>Shield Guardian</title>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shield Guardian verdict</title>
+    <link rel="stylesheet" href="./sg-overlay.css" />
+  </head>
+  <body class="overlay-body">
+    <main id="overlayRoot" class="overlay-root" aria-live="polite" aria-busy="true">
+      <section id="loadingPanel" class="overlay-panel loading">
+        <p class="eyebrow">Shield Guardian</p>
+        <h1>Reviewing transaction...</h1>
+        <p class="muted">Holding the wallet popup until the verdict returns.</p>
+      </section>
+    </main>
+    <script type="module" src="./sg-overlay.js"></script>
+  </body>
+</html>
