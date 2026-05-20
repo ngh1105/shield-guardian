@@ -129,3 +129,20 @@ npm run verify:all
 If the server is running in live GenLayer mode, smoke testing may take longer
 and may return GenLayer-derived verdicts instead of the fixed demo-mode
 expectations.
+
+## Phase C-2 manual smoke (deferred)
+
+The Phase C-2 Chrome extension hook is exercised manually at
+`http://localhost:3000/extension-harness`:
+
+1. `npm run dev` and load the unpacked extension from `chrome://extensions`.
+2. Open `/extension-harness` and connect MetaMask.
+3. Click `Native transfer` — expect a `SAFE` overlay pill that auto-proceeds.
+4. Click `ERC-20 approve` — expect a `WEIRD` modal with Proceed / Cancel.
+5. Click `Unknown selector` — expect a `WEIRD` or `DANGEROUS` modal; click
+   `Cancel` and confirm the harness logs `code: 4001`.
+6. From any modal click `Open in Shield Guardian` — confirm `/` opens with
+   the analysis form prefilled from the decoded packet.
+
+Like the Phase B and Phase C-1 manual smokes, this run is recorded after
+deployment and does not block C-2 implementation.
