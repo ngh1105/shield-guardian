@@ -7,14 +7,21 @@ GenLayer interaction server-side.
 
 ## What the Demo Shows
 
-1. The user opens a page or dapp-like surface.
-2. The Shield Guardian extension captures minimal tab context.
-3. The popup sends an action packet to `POST /api/verdict`.
-4. The backend returns a verdict: `SAFE`, `WEIRD`, or `DANGEROUS`.
-5. The UI shows reasons, risk score, confidence, next step, coverage state, and
-   provenance.
+1. The user opens `http://localhost:3000` and (optionally) connects MetaMask.
+2. The web analysis form sends an action packet to `POST /api/verdict` (demo
+   mode) or runs `submit_action_check` on the GenLayer policy court via the
+   user's wallet (live mode).
+3. In live mode, the UI walks through `Confirming chain → Confirm action →
+   Signing → Transaction broadcast (with tx hash) → Verdict`. The user sees
+   the broadcast tx hash while waiting for consensus.
+4. The backend or GenLayer returns a verdict: `SAFE`, `WEIRD`, or
+   `DANGEROUS`.
+5. The UI shows reasons, risk score, confidence, next step, coverage state,
+   and provenance.
 6. The demo readiness section explains whether the result is live GenLayer or
    explicit demo/mock mode.
+7. The Chrome extension popup is an optional bonus surface that exercises the
+   same `POST /api/verdict` path without wallet signing.
 
 ## Setup
 
@@ -58,7 +65,35 @@ http://localhost:3000
 The web analysis form includes a Use demo mode toggle. It only works when the
 server was started with `SHIELD_ENABLE_DEMO_MODE=1`.
 
-## Demo Flow
+## Web form live demo (MetaMask)
+
+This is the primary MVP demo path. The Next.js app at `/` runs a live
+GenLayer verdict signed from the user's wallet.
+
+1. Start the app with `npm run dev` (live GenLayer requires
+   `SHIELD_ENABLE_DEMO_MODE=0` and a configured `NEXT_PUBLIC_PHASE_B_CONTRACT`).
+2. Open `http://localhost:3000`.
+3. Click Connect Wallet in the topbar and approve MetaMask.
+4. Fill the analysis form (or pick a quick example) and leave Use demo mode
+   off.
+5. Click Run Analysis. The wallet card walks through:
+   - `Confirming chain in your wallet...` (preflight switches to studionet)
+   - `Confirm action` panel — review and click Confirm
+   - `Signing` — MetaMask popup appears
+   - `Transaction broadcast` — short tx hash shown while consensus runs
+     (typically a few seconds, up to about two minutes on a slow network)
+   - Verdict result rendered with reasons, risk score, confidence, next step,
+     coverage state, and provenance labeled `genlayer`
+6. Open Activity History to see the new entry. Open the Challenge dialog or
+   Loss Report dialog to exercise `challenge_verdict` / `report_loss` writes
+   against the same check.
+
+If the GenLayer policy court does not return a verdict for the submission
+(`txExecutionResultName !== FINISHED_WITH_RETURN`) or the leader receipt has
+no parseable check id, the form surfaces a user-readable error message and
+the action button re-enables. The submission is not retried automatically.
+
+## Extension popup demo (optional bonus)
 
 1. (Optional) Click Connect Wallet in the topbar and approve the MetaMask
    prompt. The address appears with a green status dot. The verdict you
