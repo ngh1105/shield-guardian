@@ -102,4 +102,34 @@ assert(
   "Optional host permissions must support user-selected API origins.",
 );
 
+// Phase C-2 manifest extensions.
+const contentScripts = manifest.content_scripts ?? [];
+assert(
+  contentScripts.length >= 2,
+  "Manifest must declare both an injector and a bridge content_script.",
+);
+
+const injector = contentScripts.find(
+  (script) => script.world === "MAIN" && script.run_at === "document_start",
+);
+assert(
+  injector && Array.isArray(injector.js) && injector.js.includes("inject/sg-injector.js"),
+  "Manifest must declare a MAIN-world content_script with inject/sg-injector.js at document_start.",
+);
+
+const bridge = contentScripts.find(
+  (script) => (script.world ?? "ISOLATED") === "ISOLATED" && script.js?.includes("content/sg-bridge.js"),
+);
+assert(bridge, "Manifest must declare an isolated content_script with content/sg-bridge.js.");
+
+const war = manifest.web_accessible_resources ?? [];
+const overlayWar = war.find((entry) =>
+  Array.isArray(entry.resources) && entry.resources.some((r) => r === "overlay/sg-overlay.html"),
+);
+assert(overlayWar, "Manifest must expose overlay/sg-overlay.html via web_accessible_resources.");
+assert(
+  Array.isArray(overlayWar.matches) && overlayWar.matches.includes("<all_urls>") === false,
+  "Overlay web_accessible_resources matches must not include <all_urls>.",
+);
+
 console.log("Extension static check passed.");
