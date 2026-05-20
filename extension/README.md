@@ -60,3 +60,20 @@ This is a local demo artifact, not a Chrome Web Store submission.
 - The extension never signs or sends transactions.
 - GenLayer calls stay server-side through `POST /api/verdict`.
 - Browser storage only keeps settings and a short-lived last verdict cache.
+
+## Phase C-2 smoke (deferred)
+
+The MV3 hook for `eth_sendTransaction` is exercised manually:
+
+1. Start the web app: `npm run dev`.
+2. Reload the extension at `chrome://extensions`.
+3. Open `http://localhost:3000/extension-harness`.
+4. For each scenario button, watch for the Shield Guardian overlay before
+   the MetaMask popup appears.
+5. Confirm Proceed forwards to MetaMask and Cancel rejects with EIP-1193
+   `code: 4001` in the harness log.
+6. From any overlay click `Open in Shield Guardian` and confirm the form
+   is prefilled from the decoded packet.
+
+This smoke remains deferred alongside the Phase B and Phase C-1 manual
+MetaMask smokes.
