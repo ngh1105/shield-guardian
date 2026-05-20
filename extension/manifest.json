@@ -3,6 +3,7 @@
   "name": "Shield Guardian",
   "version": "0.1.0",
   "description": "Warning-first wallet action analysis for Chrome.",
+  "minimum_chrome_version": "111",
   "action": {
     "default_title": "Shield Guardian",
     "default_popup": "popup.html"
@@ -14,5 +15,26 @@
   "options_page": "options.html",
   "host_permissions": ["http://localhost/*", "http://127.0.0.1/*"],
   "permissions": ["activeTab", "storage", "scripting"],
-  "optional_host_permissions": ["http://*/*", "https://*/*"]
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["inject/sg-injector.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["content/sg-bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["overlay/sg-overlay.html", "overlay/sg-overlay.js", "overlay/sg-overlay.css"],
+      "matches": ["http://localhost/*", "http://127.0.0.1/*"]
+    }
+  ]
 }
