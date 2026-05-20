@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { Address } from "viem";
 
 import { ActivityHistory } from "@/features/shield/components/activity-history";
@@ -149,6 +149,7 @@ export function ShieldPage() {
   const [error, setError] = useState("");
   const [demoMode, setDemoMode] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const lastMirroredResultKey = useRef<string | null>(null);
   const wallet = useWallet();
   const verdict = useShieldVerdict();
   const policyActions = usePolicyCourtActions({
@@ -232,11 +233,21 @@ export function ShieldPage() {
 
   useEffect(() => {
     if (verdict.state.phase === "done" && verdict.state.result) {
+      const provenance = verdict.state.result.provenance;
+      const resultKey =
+        provenance?.transactionHash ??
+        (provenance?.checkId
+          ? `check:${provenance.checkId}`
+          : JSON.stringify(verdict.state.result));
+      if (lastMirroredResultKey.current === resultKey) {
+        return;
+      }
+      lastMirroredResultKey.current = resultKey;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror async verdict result into local state for canvas rendering
       setResult(verdict.state.result);
       wallet.bumpInvalidation();
     }
-  }, [verdict.state.phase, verdict.state.result, wallet]);
+  }, [verdict.state.phase, verdict.state.result, wallet.bumpInvalidation]);
 
   return (
     <div className={styles.page}>
