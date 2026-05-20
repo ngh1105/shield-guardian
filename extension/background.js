@@ -18,7 +18,7 @@ import {
   setPending,
 } from "./lib/intercept-store.js";
 import {
-  pendingToSendTarget,
+  resolveDecisionTarget,
   validateDecisionChoice,
 } from "./lib/decision-routing.mjs";
 
@@ -268,7 +268,7 @@ async function interceptRequest({ nonce, packet, tabId, frameId }) {
   return { ok: true, nonce, verdict, source };
 }
 
-async function routeOverlayDecision({ nonce, choice }) {
+async function routeOverlayDecision({ nonce, choice }, sender) {
   if (typeof nonce !== "string" || nonce.length === 0) {
     throw new Error("Missing intercept nonce.");
   }
@@ -276,15 +276,16 @@ async function routeOverlayDecision({ nonce, choice }) {
     throw new Error("Decision must be 'proceed' or 'cancel'.");
   }
   const entry = await getPending(nonce);
-  if (!entry) {
-    throw new Error("No pending intercept matches this nonce.");
-  }
-  const target = pendingToSendTarget(entry);
+  // Fall back to the overlay sender's tab/frame so a SW restart that wipes
+  // chrome.storage.session does not strand the dapp promise.
+  const target = resolveDecisionTarget(entry, sender);
   if (!target) {
-    throw new Error("Pending intercept is missing a tab target.");
+    throw new Error("Unable to resolve a tab to forward this decision.");
   }
 
-  await clearPending(nonce);
+  if (entry) {
+    await clearPending(nonce);
+  }
 
   const options = target.frameId !== undefined ? { frameId: target.frameId } : undefined;
   try {
@@ -365,7 +366,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "SHIELD_OVERLAY_DECISION") {
     void (async () => {
       try {
-        sendResponse(await routeOverlayDecision({ nonce: message.nonce, choice: message.choice }));
+        sendResponse(await routeOverlayDecision({ nonce: message.nonce, choice: message.choice }, sender));
       } catch (error) {
         sendResponse({ ok: false, error: asErrorMessage(error) });
       }

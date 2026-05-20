@@ -927,8 +927,7 @@
 }
 
 .policyStatusInfo,
-.policyStatusError,
-.policyStatusWarning {
+.policyStatusError {
   margin: 0;
   font-size: 0.84rem;
   font-family: var(--font-mono), monospace;
@@ -941,10 +940,6 @@
 
 .policyStatusError {
   color: var(--danger);
-}
-
-.policyStatusWarning {
-  color: var(--weird);
 }
 
 .policyDialogBackdrop {

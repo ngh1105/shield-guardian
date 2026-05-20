@@ -18,3 +18,22 @@ export function pendingToSendTarget(entry) {
   }
   return target;
 }
+
+export function senderToSendTarget(sender) {
+  if (!sender || typeof sender !== "object") return null;
+  const tabId = sender.tab?.id;
+  if (typeof tabId !== "number") return null;
+  const target = { tabId };
+  if (typeof sender.frameId === "number") {
+    target.frameId = sender.frameId;
+  }
+  return target;
+}
+
+// chrome.storage.session is wiped when the SW restarts, so a long-lived
+// overlay can outlive its pending entry. When that happens, fall back to the
+// sender's own tab/frame so the bridge still receives the decision instead of
+// the dapp promise hanging.
+export function resolveDecisionTarget(entry, sender) {
+  return pendingToSendTarget(entry) ?? senderToSendTarget(sender);
+}

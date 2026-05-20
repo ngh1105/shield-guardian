@@ -18,7 +18,32 @@ function escapeHtml(value) {
 }
 
 async function sendDecision(choice) {
-  await chrome.runtime.sendMessage({ type: "SHIELD_OVERLAY_DECISION", nonce, choice });
+  let response;
+  try {
+    response = await chrome.runtime.sendMessage({
+      type: "SHIELD_OVERLAY_DECISION",
+      nonce,
+      choice,
+    });
+  } catch (error) {
+    renderRoutingError(error?.message ?? String(error));
+    return;
+  }
+  if (!response?.ok) {
+    renderRoutingError(response?.error ?? "Shield Guardian could not deliver the decision.");
+  }
+}
+
+function renderRoutingError(message) {
+  root.classList.remove("tone-safe");
+  root.innerHTML = `
+    <section class="overlay-panel unavailable">
+      <p class="eyebrow">Shield Guardian</p>
+      <h1>Decision not delivered</h1>
+      <p class="muted">${escapeHtml(message)}</p>
+      <p class="muted">Reload this tab to abort the pending wallet action.</p>
+    </section>
+  `;
 }
 
 async function openInWebApp(packet) {

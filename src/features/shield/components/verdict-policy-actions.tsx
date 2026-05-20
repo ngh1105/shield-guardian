@@ -24,7 +24,7 @@ type VerdictPolicyActionsProps = {
 function describePhase(
   phase: PolicyActionPhase,
   checkId: number,
-): { tone: "info" | "error" | "warning"; message: string } | null {
+): { tone: "info" | "error"; message: string } | null {
   if (phase.kind === "idle") return null;
   if (!("checkId" in phase) || phase.checkId !== checkId) return null;
 
@@ -36,14 +36,8 @@ function describePhase(
   if (phase.kind === "signing") {
     return { tone: "info", message: `Awaiting wallet signature for ${verb}…` };
   }
-  if (phase.kind === "refreshing") {
-    return { tone: "info", message: `Refetching history after ${verb}…` };
-  }
   if (phase.kind === "error") {
     return { tone: "error", message: phase.message };
-  }
-  if (phase.kind === "warning") {
-    return { tone: "warning", message: phase.message };
   }
   return null;
 }
@@ -144,9 +138,7 @@ export function VerdictPolicyActions({
           className={
             phaseText.tone === "error"
               ? styles.policyStatusError
-              : phaseText.tone === "warning"
-                ? styles.policyStatusWarning
-                : styles.policyStatusInfo
+              : styles.policyStatusInfo
           }
         >
           {phaseText.message}
@@ -155,13 +147,6 @@ export function VerdictPolicyActions({
 
       {!phaseText && optimisticText ? (
         <p className={styles.policyStatusInfo}>{optimisticText}</p>
-      ) : null}
-
-      {optimistic?.refreshFailed ? (
-        <p className={styles.policyStatusWarning}>
-          Live refresh failed. The optimistic state above may not match on-chain
-          state until you refresh history.
-        </p>
       ) : null}
 
       {challengeOpen ? (

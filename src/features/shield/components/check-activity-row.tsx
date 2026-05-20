@@ -44,9 +44,7 @@ function rowPhaseText(
   const verb = phase.action === "challenge" ? "challenge" : "loss report";
   if (phase.kind === "preflight") return `Confirming chain for ${verb}…`;
   if (phase.kind === "signing") return `Awaiting signature for ${verb}…`;
-  if (phase.kind === "refreshing") return `Refetching after ${verb}…`;
   if (phase.kind === "error") return `Error: ${phase.message}`;
-  if (phase.kind === "warning") return `Warning: ${phase.message}`;
   return null;
 }
 

@@ -24,7 +24,6 @@ export type OptimisticAction = {
   coverageStatus: CoverageStatus;
   challengeCountDelta: number;
   lossReportTxHash: string;
-  refreshFailed: boolean;
   serverCheck?: {
     coverageStatus: string;
     challengeCount: number;
@@ -37,15 +36,8 @@ export type PolicyActionPhase =
   | { kind: "idle" }
   | { kind: "preflight"; checkId: number; action: "challenge" | "loss" }
   | { kind: "signing"; checkId: number; action: "challenge" | "loss" }
-  | { kind: "refreshing"; checkId: number; action: "challenge" | "loss" }
   | {
       kind: "error";
-      checkId: number;
-      action: "challenge" | "loss";
-      message: string;
-    }
-  | {
-      kind: "warning";
       checkId: number;
       action: "challenge" | "loss";
       message: string;
@@ -96,16 +88,14 @@ export function usePolicyCourtActions(deps: PolicyActionDeps) {
   const isBusy = useCallback(
     (checkId: number) => {
       return (
-        (phase.kind === "preflight" ||
-          phase.kind === "signing" ||
-          phase.kind === "refreshing") &&
+        (phase.kind === "preflight" || phase.kind === "signing") &&
         phase.checkId === checkId
       );
     },
     [phase],
   );
 
-  const isAnyBusy = phase.kind !== "idle" && phase.kind !== "error" && phase.kind !== "warning";
+  const isAnyBusy = phase.kind !== "idle" && phase.kind !== "error";
 
   const ensureWallet = useCallback((): {
     ok: true;
@@ -182,7 +172,6 @@ export function usePolicyCourtActions(deps: PolicyActionDeps) {
             writeResult.check.loss_report_tx_hash ??
             current[checkId]?.lossReportTxHash ??
             "",
-          refreshFailed: false,
           serverCheck: {
             coverageStatus: writeResult.check.coverage_status,
             challengeCount: writeResult.check.challenge_count,
@@ -192,31 +181,8 @@ export function usePolicyCourtActions(deps: PolicyActionDeps) {
         },
       }));
 
-      setPhase({ kind: "refreshing", checkId, action: "challenge" });
-      try {
-        deps.bumpInvalidation();
-        setPhase({ kind: "idle" });
-      } catch (error) {
-        setOptimistic((current) => ({
-          ...current,
-          [checkId]: {
-            ...(current[checkId] ?? {
-              kind: "challenge",
-              coverageStatus: "challenged",
-              challengeCountDelta: 1,
-              lossReportTxHash: "",
-              refreshFailed: false,
-            }),
-            refreshFailed: true,
-          },
-        }));
-        setPhase({
-          kind: "warning",
-          checkId,
-          action: "challenge",
-          message: `${pickError(error)} Refresh history manually if rows look stale.`,
-        });
-      }
+      deps.bumpInvalidation();
+      setPhase({ kind: "idle" });
       return true;
     },
     [deps, ensureWallet],
@@ -287,7 +253,6 @@ export function usePolicyCourtActions(deps: PolicyActionDeps) {
           challengeCountDelta: 0,
           lossReportTxHash:
             writeResult.check.loss_report_tx_hash || txHash,
-          refreshFailed: false,
           serverCheck: {
             coverageStatus: writeResult.check.coverage_status,
             challengeCount: writeResult.check.challenge_count,
@@ -297,31 +262,8 @@ export function usePolicyCourtActions(deps: PolicyActionDeps) {
         },
       }));
 
-      setPhase({ kind: "refreshing", checkId, action: "loss" });
-      try {
-        deps.bumpInvalidation();
-        setPhase({ kind: "idle" });
-      } catch (error) {
-        setOptimistic((current) => ({
-          ...current,
-          [checkId]: {
-            ...(current[checkId] ?? {
-              kind: "loss",
-              coverageStatus: optimisticCoverage,
-              challengeCountDelta: 0,
-              lossReportTxHash: txHash,
-              refreshFailed: false,
-            }),
-            refreshFailed: true,
-          },
-        }));
-        setPhase({
-          kind: "warning",
-          checkId,
-          action: "loss",
-          message: `${pickError(error)} Refresh history manually if rows look stale.`,
-        });
-      }
+      deps.bumpInvalidation();
+      setPhase({ kind: "idle" });
       return true;
     },
     [deps, ensureWallet],
