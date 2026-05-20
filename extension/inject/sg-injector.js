@@ -13,6 +13,98 @@
     href: window.location.href,
   };
 
+  // Inlined from extension/inject/selectors.mjs and normalize.mjs — kept
+  // in sync by hand because Chrome MV3 content_scripts are loaded as
+  // classic scripts (no ESM imports). When you change either source,
+  // mirror the change here in the same commit.
+  const SG_SELECTORS = Object.freeze({
+    "0x095ea7b3": "approve",
+    "0xa9059cbb": "sign",
+    "0x23b872dd": "sign",
+    "0xeb672419": "bridge",
+    "0x7dc20382": "bridge",
+    "0x9a1d09c0": "bridge",
+    "0x9fbf10fc": "bridge",
+    "0xc73f7c3a": "bridge",
+    "0x4e71d92d": "claim",
+    "0x379607f5": "claim",
+    "0xae169a50": "claim",
+    "0x1249c58b": "claim",
+    "0x6a627842": "claim",
+    "0xa0712d68": "claim",
+  });
+
+  const SG_MAX_CALLDATA = 32 * 1024;
+  const SG_MAX_SUMMARY = 280;
+  const SG_MAX_RAW_SIGNALS = 1024;
+
+  function sgShort(v) {
+    const s = String(v ?? "");
+    if (s.length <= 13) return s;
+    return `${s.slice(0, 6)}...${s.slice(-4)}`;
+  }
+
+  function sgSelector(data) {
+    if (typeof data !== "string" || !data.startsWith("0x") || data.length < 10) return "0x";
+    return `0x${data.slice(2, 10).toLowerCase()}`;
+  }
+
+  function sgEthValue(weiHex) {
+    try {
+      const wei = BigInt(weiHex || "0x0");
+      if (wei === 0n) return "0";
+      const eth = Number(wei) / 1e18;
+      return Number.isFinite(eth) ? eth.toFixed(6).replace(/\.?0+$/, "") : wei.toString();
+    } catch {
+      return "0";
+    }
+  }
+
+  function sgClamp(value, max) {
+    const s = String(value ?? "");
+    return s.length <= max ? s : `${s.slice(0, max - 3)}...`;
+  }
+
+  function sgBuildPacket(params, ctx) {
+    if (!params || typeof params !== "object") throw new Error("missing params");
+    if (!params.from) throw new Error("missing from");
+
+    const data = typeof params.data === "string" ? params.data : "0x";
+    const isCreation = !params.to;
+    const selector = isCreation ? "0x" : sgSelector(data);
+    const actionType = isCreation ? "sign" : SG_SELECTORS[selector] ?? "sign";
+
+    const dataBytes = data.startsWith("0x") ? (data.length - 2) / 2 : 0;
+    const oversize = dataBytes > SG_MAX_CALLDATA;
+    const truncatedData = oversize ? data.slice(0, 66) : data;
+    const protocol = sgClamp(ctx.protocol ?? "", 64);
+    const ethValue = sgEthValue(params.value ?? "0x0");
+
+    let summary;
+    if (isCreation) summary = `contract deployment from ${sgShort(params.from)}`;
+    else if (oversize) summary = `${actionType} via ${protocol || "unknown"}: oversize calldata (${dataBytes} B)`;
+    else if (selector === "0x" && data !== "0x") summary = `${actionType} via ${protocol || "unknown"}: undecoded args`;
+    else summary = `${actionType} via ${protocol || "unknown"}: to=${sgShort(params.to)}, value=${ethValue} ETH, selector=${selector}`;
+
+    return {
+      actionType,
+      protocol,
+      website: ctx.website ?? "",
+      summary: sgClamp(summary, SG_MAX_SUMMARY),
+      rawSignals: sgClamp([
+        `from=${params.from}`,
+        `to=${params.to ?? "(creation)"}`,
+        `value=${ethValue}`,
+        `selector=${selector}`,
+        `gas=${params.gas ?? "auto"}`,
+        `chainId=${ctx.chainIdHex ?? "unknown"}`,
+        `data=${truncatedData}`,
+      ].join(" | "), SG_MAX_RAW_SIGNALS),
+      assetValueUsd: 0,
+      gasCostUsd: 0,
+    };
+  }
+
   const REQUEST_TIMEOUT_MS = 60_000;
   const INTERCEPTED_METHOD = "eth_sendTransaction";
   const pending = new Map();
@@ -51,11 +143,22 @@
 
   async function dispatchIntercept(originalRequest, args) {
     const nonce = Frozen.randomUUID();
-    const packet = window.__shieldGuardianBuildPacket
-      ? window.__shieldGuardianBuildPacket(args.params?.[0] ?? {}, { website: Frozen.href })
-      : { website: Frozen.href, params: args.params?.[0] ?? null };
+    const protocol = (
+      document.querySelector("[data-shield-protocol]")?.getAttribute("data-shield-protocol")
+      || document.title
+      || new URL(Frozen.href).hostname
+    ).toString();
 
     const { promise, resolve, reject } = deferred();
+
+    let packet;
+    try {
+      packet = sgBuildPacket(args.params?.[0] ?? {}, { website: Frozen.href, protocol });
+    } catch (err) {
+      reject({ code: -32603, message: `Shield Guardian internal error: ${err.message}` });
+      return promise;
+    }
+
     const timer = setTimeout(() => {
       pending.delete(nonce);
       reject({ code: -32603, message: "Shield Guardian internal error: timeout." });
