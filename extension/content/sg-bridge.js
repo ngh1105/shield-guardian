@@ -1,6 +1,8 @@
 /* global chrome */
-// Classic content script for Chrome MV3. Mirror any change here in
-// extension/content/sg-bridge-core.mjs (the testable ESM surface).
+// Classic content script for Chrome MV3. Mirror any change to MESSAGE_TYPES
+// or isAcceptableMessage in extension/content/sg-bridge-core.mjs, which is
+// the testable ESM surface (Chrome MV3 does not expose a "type": "module"
+// knob for content_scripts, so this file inlines the same logic by hand).
 
 (function () {
   if (window.__shieldGuardianBridgeInstalled) return;
@@ -12,6 +14,7 @@
     PING: "SG_PING",
   };
   const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
+  const OVERLAY_ID = "shield-guardian-overlay-frame";
 
   function isAcceptableMessage(event, ctx) {
     if (!event || typeof event !== "object") return false;
@@ -23,17 +26,81 @@
     return true;
   }
 
+  function ensureOverlay(nonce) {
+    let frame = document.getElementById(OVERLAY_ID);
+    if (frame) {
+      frame.dataset.nonce = nonce;
+      return frame;
+    }
+    frame = document.createElement("iframe");
+    frame.id = OVERLAY_ID;
+    frame.dataset.nonce = nonce;
+    frame.src = chrome.runtime.getURL(
+      `overlay/sg-overlay.html?nonce=${encodeURIComponent(nonce)}`,
+    );
+    Object.assign(frame.style, {
+      position: "fixed",
+      inset: "0",
+      width: "100%",
+      height: "100%",
+      border: "0",
+      zIndex: "2147483646",
+      background: "transparent",
+      colorScheme: "dark",
+    });
+    document.documentElement.appendChild(frame);
+    return frame;
+  }
+
+  function removeOverlay() {
+    const frame = document.getElementById(OVERLAY_ID);
+    if (frame) frame.remove();
+  }
+
+  async function relayIntercept(event, ctx) {
+    const { nonce, packet } = event.data;
+    let response;
+    try {
+      response = await chrome.runtime.sendMessage({
+        type: "SHIELD_INTERCEPT",
+        nonce,
+        packet,
+      });
+    } catch (error) {
+      response = { ok: false, error: error?.message ?? "runtime unavailable" };
+    }
+
+    if (!response?.ok) {
+      ctx.window.postMessage(
+        { type: MESSAGE_TYPES.INTERCEPT_RES, nonce, choice: "cancel" },
+        ctx.origin,
+      );
+      return;
+    }
+
+    ensureOverlay(nonce);
+  }
+
   if (typeof chrome === "undefined" || !chrome.runtime) return;
+  if (window.top !== window) return;
 
   const ctx = { window, origin: window.location.origin };
 
   window.addEventListener("message", (event) => {
     if (!isAcceptableMessage(event, ctx)) return;
-    if (event.data.type === MESSAGE_TYPES.PING) {
-      window.postMessage(
-        { type: MESSAGE_TYPES.INTERCEPT_RES, nonce: event.data.nonce, choice: "pong" },
-        ctx.origin,
-      );
+    if (event.data.type === MESSAGE_TYPES.INTERCEPT_REQ) {
+      relayIntercept(event, ctx);
     }
+  });
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (!message || message.type !== "SHIELD_OVERLAY_DECISION") return false;
+    const { nonce, choice } = message;
+    ctx.window.postMessage(
+      { type: MESSAGE_TYPES.INTERCEPT_RES, nonce, choice },
+      ctx.origin,
+    );
+    removeOverlay();
+    return false;
   });
 })();
