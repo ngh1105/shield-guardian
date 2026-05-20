@@ -11,6 +11,7 @@ import {
   INITIAL_FORM,
   SHIELD_EXAMPLES,
 } from "@/features/shield/data/examples";
+import { parsePrefill } from "@/features/shield/lib/parse-prefill";
 import { requestShieldVerdict } from "@/features/shield/lib/request-verdict";
 import { usePolicyCourtActions } from "@/features/shield/lib/use-policy-court-actions";
 import { useShieldVerdict } from "@/features/shield/lib/use-shield-verdict";
@@ -155,6 +156,20 @@ export function ShieldPage() {
     status: wallet.status,
     bumpInvalidation: wallet.bumpInvalidation,
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("prefill");
+    if (!raw) return;
+    const next = parsePrefill(raw);
+    if (!next) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm(next);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("prefill");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
 
   const provenanceRows = result ? getProvenanceRows(result) : [];
 
