@@ -16,12 +16,22 @@ logic, extension UI, and GenLayer policy code stay separated.
 ## Request Flow
 
 1. `src/app/page.tsx` renders the Shield feature page.
-2. `ShieldPage` collects the action packet and calls `requestShieldVerdict`.
-3. `POST /api/verdict` validates and normalizes the request.
-4. `submitVerdictRequest` submits `submit_action_check` to GenLayer.
-5. The API reads `get_check(check_id)` from GenLayer and maps it into the UI verdict shape.
-6. If `GENLAYER_CONTRACT_ADDRESS` is not configured, the route falls back to the local mock verdict engine for development.
-7. The Chrome MV3 extension is optional bonus material; the default demo path is the web app only.
+2. `ShieldPage` collects the action packet and the wallet address from
+   `useWallet`.
+3. For demo mode, the form posts to `POST /api/verdict` with the
+   `x-shield-demo-mode: 1` header; the server returns a mock verdict.
+4. For live mode, the browser calls `submitBrowserVerdictRequest`
+   (`src/lib/genlayer/browser-sdk-adapter.ts`) which signs
+   `submit_action_check` directly against the GenLayer policy court
+   using the user's wallet (EIP-1193). `/api/verdict` is no longer used
+   for live writes and returns HTTP 410 for non-demo POSTs.
+5. After the receipt is accepted, the browser reads `get_check(check_id)`
+   from the same contract and maps it into the UI verdict shape.
+6. `GET /api/checks` and `GET /api/overview` continue to read on the
+   server using `GENLAYER_CONTRACT_ADDRESS` for the per-wallet history
+   and aggregate counts.
+7. The Chrome MV3 extension is optional bonus material; the default
+   demo path is the web app only.
 
 ## Extension Boundary
 
@@ -36,31 +46,49 @@ port, so `http://localhost:3000` resolves to the host permission pattern
 ## Wallet Identity
 
 The web app reads the connected wallet from `window.ethereum` (EIP-1193) via
-`src/features/wallet/wallet-context.tsx`. The address is forwarded to the
-verdict API as `claimedRequester`. Transactions are signed in the browser via
-MetaMask — the server no longer holds a private key.
+`src/features/wallet/wallet-context.tsx`. Live verdicts are signed in the
+browser through `genlayer-js`, so the contract's `msg.sender` IS the user's
+wallet — the server no longer holds a private key, and there is no
+`claimedRequester` plumbing on the app side (removed in commit `dafd630`,
+2026-05-21). The on-chain `claimed_requester` field still exists in
+`shield_policy_court.py` and is asserted by `scripts/smoke-checks.mjs`, but
+the app reads `requester` directly from each `GenLayerCheck` for ownership
+checks (e.g. who can file a loss report).
 
-The contract stores `claimed_requester` separately from `requester` (the
-on-chain message sender), so per-wallet history is honest:
+Contract write/read surface used in v1:
 
-- `submit_action_check_for(claimed_requester, ...)` is used when the user
-  has connected a wallet.
-- `submit_action_check(...)` (legacy) is used for anonymous submissions and
-  records `claimed_requester = sender_address`.
-- `get_checks_for(claimed_requester, limit)` powers `GET /api/checks`.
-- `get_overview()` powers `GET /api/overview`.
+- `submit_action_check(...)` — browser-signed live verdict submission;
+  records `claimed_requester = sender_address` automatically.
+- `challenge_verdict(check_id, rationale)` — browser-signed challenge.
+- `report_loss(check_id, tx_hash, summary)` — browser-signed loss report;
+  the UI gates this to the wallet that matches the check's `requester`.
+- `get_check(check_id)` — read after a write to refresh provenance.
+- `get_checks_for(claimed_requester, limit)` — server-side read powering
+  `GET /api/checks?address=<wallet>`.
+- `get_overview()` — server-side read powering `GET /api/overview`.
+
+The contract retains `submit_action_check_for(claimed_requester, ...)` for
+historical compatibility, but the browser flow does not call it.
 
 ## Runtime Setup
 
-Use the fixed Studionet contract:
-
 ```env
+# Server-side reads (history + overview).
 GENLAYER_RPC_URL=https://studio.genlayer.com/api
 GENLAYER_CONTRACT_ADDRESS=0x0B6C673eBb242fb171291bc4ADCCa9785cDDa65f
+
+# Browser-signed live writes (submit / challenge / report loss).
+NEXT_PUBLIC_PHASE_B_CONTRACT=0x0B6C673eBb242fb171291bc4ADCCa9785cDDa65f
+
+# Live verdict gate. Set to 1 only when the demo/mock path is desired.
+SHIELD_ENABLE_DEMO_MODE=0
 ```
 
-Connect a MetaMask wallet on Studionet (chain id 61999). The dapp signs
-transactions in the browser — no server-side private key is required.
+`NEXT_PUBLIC_PHASE_B_CONTRACT` and `GENLAYER_CONTRACT_ADDRESS` should point
+at the same policy court address for normal operation; they are split so
+the browser bundle never depends on a server-only secret name. Connect a
+MetaMask wallet on Studionet (chain id 61999). The dapp signs transactions
+in the browser — no server-side private key is required.
 
 ## Contract Surface
 

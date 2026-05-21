@@ -513,10 +513,14 @@ Build and lint are clean. Final integration review (commit
 `bd8fffd` plus `ef8f1f8`) approved the layered flow end-to-end against
 the plan and against §4.1 of this report.
 
-### 5.1 Open §4.2 questions — still open
+### 5.1 Open §4.2 questions — partially observed
 
-The four UX questions in §4.2 remain unanswered because they require
-a human at MetaMask:
+**Update 2026-05-21:** the user manually walked the live web path on
+Studionet and reported it works normally end-to-end (preflight,
+signing, broadcast, verdict, Activity History row, challenge and loss
+report writes). This covers the happy-path versions of items 3 and 4
+below. It is a hand-driven smoke and not an automated test, so the
+remaining edge cases stay open until they are observed:
 
 1. Wallet on the wrong chain (e.g. Sepolia) — what does MetaMask do
    when the dapp issues `eth_sendTransaction` for chain `0xf22f`?
@@ -524,9 +528,10 @@ a human at MetaMask:
    `wallet_addEthereumChain` produce a clean popup, or does MetaMask
    block the unknown RPC?
 3. Confirmation copy — what does the actual MetaMask review screen
-   show for a `submit_action_check` invocation?
+   show for a `submit_action_check` invocation? *Observed working on
+   2026-05-21; copy not formally captured.*
 4. Receipt timing — gap between MetaMask broadcast and the
-   `/api/checks` row appearing.
+   `/api/checks` row appearing. *Observed acceptable on 2026-05-21.*
 
 The dedicated harness route (`src/app/phase-b-poc/page.tsx`) and the
 Node EIP-1193 probe (`scripts/phase-b-rpc-probe.mjs`) were retired

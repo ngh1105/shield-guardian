@@ -135,6 +135,14 @@ Component boundaries:
 - Extend `CheckRow` to carry `requester`, `claimedRequester`,
   `coverageStatus`, `lossReportTxHash`, `note`, `challengeCount`, and
   `transactionHash` when available.
+  > **Implementation note (2026-05-21, commit `dafd630`):** the
+  > app-side `claimedRequester` field was removed from `CheckRow` and
+  > `ShieldVerdictProvenance` because no UI/API/test consumed it once
+  > Phase B browser-signed writes landed (the contract's `msg.sender`
+  > IS the requester). The on-chain `claimed_requester` field still
+  > exists on `GenLayerCheck` and is asserted by
+  > `scripts/smoke-checks.mjs`. Ownership checks (loss-report gating)
+  > use the `requester` field directly.
 
 No new `/activity` route is added in C-1. A future route can reuse the same row
 and dialog components if the contract later adds a broader feed.
