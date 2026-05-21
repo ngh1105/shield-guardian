@@ -1,6 +1,6 @@
 # Shield Guardian
 
-A wallet decision layer for EVM dapps. Shield turns action packets — approvals, bridges, claims, signatures — into live verdicts before the user signs. Verdicts are signed in the browser against a GenLayer policy court on Studionet, so the dapp never holds a private key.
+A wallet decision layer for EVM dapps. Shield turns action packets approvals, bridges, claims, signatures into live verdicts before the user signs. Verdicts are signed in the browser against a GenLayer policy court on Studionet, so the dapp never holds a private key.
 
 **Status:** MVP web path live. Manual smoke passed 2026-05-21. `lint`, `build`, and `verify:all` are green on `main`.
 
