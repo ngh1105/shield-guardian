@@ -75,10 +75,10 @@ historical compatibility, but the browser flow does not call it.
 ```env
 # Server-side reads (history + overview).
 GENLAYER_RPC_URL=https://studio.genlayer.com/api
-GENLAYER_CONTRACT_ADDRESS=0x0B6C673eBb242fb171291bc4ADCCa9785cDDa65f
+GENLAYER_CONTRACT_ADDRESS=0x878b7E60d9b6afD46d7B2981003dd5f2a6871286
 
 # Browser-signed live writes (submit / challenge / report loss).
-NEXT_PUBLIC_PHASE_B_CONTRACT=0x0B6C673eBb242fb171291bc4ADCCa9785cDDa65f
+NEXT_PUBLIC_PHASE_B_CONTRACT=0x878b7E60d9b6afD46d7B2981003dd5f2a6871286
 
 # Live verdict gate. Set to 1 only when the demo/mock path is desired.
 SHIELD_ENABLE_DEMO_MODE=0
