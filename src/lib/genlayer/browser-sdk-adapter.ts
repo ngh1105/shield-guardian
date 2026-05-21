@@ -9,6 +9,7 @@ import type { Address } from "viem";
 import type { ShieldVerdictRequest, ShieldVerdictResponse } from "@/features/shield/types";
 
 import {
+  describeExecutionResult,
   isFinishedWithReturn,
   parseReturnedCheckId,
 } from "./browser-sdk-helpers.mjs";
@@ -26,6 +27,7 @@ type SdkReceipt = {
   hash?: string;
   result?: unknown;
   txExecutionResultName?: unknown;
+  txExecutionResult?: number;
   consensus_data?: {
     leader_receipt?: Array<{ result?: LeaderReceiptResult }>;
   };
@@ -80,16 +82,16 @@ export async function submitBrowserVerdictRequest(
     retries: 120,
   })) as SdkReceipt;
 
-  if (!isFinishedWithReturn(receipt)) {
-    throw new Error(
-      "GenLayer policy court did not return a verdict for this submission. The transaction status was " +
-        String(receipt.txExecutionResultName ?? "unknown") +
-        ". Try again in a moment.",
-    );
-  }
-
   const checkId = parseReturnedCheckId(receipt);
+
   if (!checkId) {
+    if (!isFinishedWithReturn(receipt)) {
+      throw new Error(
+        "GenLayer policy court did not return a verdict for this submission. The transaction status was " +
+          describeExecutionResult(receipt) +
+          ". Try again in a moment.",
+      );
+    }
     throw new Error(
       "GenLayer policy court returned a transaction without a parseable check id. Refresh and submit again.",
     );

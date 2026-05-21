@@ -20,6 +20,39 @@ export function parseReturnedCheckId(receipt) {
 
 export const FINISHED_WITH_RETURN = "FINISHED_WITH_RETURN";
 
+// Mirrors genlayer-js `executionResultNumberToName` (genlayer-js@1.1.8):
+// 0 = NOT_VOTED, 1 = FINISHED_WITH_RETURN, 2 = FINISHED_WITH_ERROR.
+const EXECUTION_RESULT_BY_NUMBER = {
+  0: "NOT_VOTED",
+  1: "FINISHED_WITH_RETURN",
+  2: "FINISHED_WITH_ERROR",
+};
+
+// SDK populates either the string `txExecutionResultName` or the numeric
+// `txExecutionResult` (sometimes both, sometimes neither). Resolve to a
+// single canonical label so callers don't have to branch.
+export function getExecutionResultLabel(receipt) {
+  if (!receipt) return undefined;
+  if (typeof receipt.txExecutionResultName === "string") {
+    return receipt.txExecutionResultName;
+  }
+  const numeric = receipt.txExecutionResult;
+  if (typeof numeric === "number" && numeric in EXECUTION_RESULT_BY_NUMBER) {
+    return EXECUTION_RESULT_BY_NUMBER[numeric];
+  }
+  return undefined;
+}
+
 export function isFinishedWithReturn(receipt) {
-  return receipt?.txExecutionResultName === FINISHED_WITH_RETURN;
+  return getExecutionResultLabel(receipt) === FINISHED_WITH_RETURN;
+}
+
+// Render both raw fields for diagnostic error messages — useful when the
+// SDK reports the receipt in only one form and we need to know which.
+export function describeExecutionResult(receipt) {
+  const name = receipt?.txExecutionResultName ?? "unknown";
+  const numeric = receipt?.txExecutionResult;
+  return typeof numeric === "number"
+    ? `${name} (code ${numeric})`
+    : String(name);
 }

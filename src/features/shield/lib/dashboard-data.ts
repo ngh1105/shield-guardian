@@ -58,10 +58,20 @@ function mapCheckRow(check: GenLayerCheck): CheckRow {
   };
 }
 
+async function readErrorMessage(response: Response, fallback: string) {
+  try {
+    const body = (await response.json()) as { error?: string };
+    if (body?.error) return body.error;
+  } catch {
+    // Response body was not JSON; fall through.
+  }
+  return `${fallback} (HTTP ${response.status})`;
+}
+
 export async function fetchOverview(): Promise<OverviewSnapshot> {
   const response = await fetch("/api/overview");
   if (!response.ok) {
-    throw new Error(`Overview request failed: ${response.status}`);
+    throw new Error(await readErrorMessage(response, "Overview request failed"));
   }
   const body = (await response.json()) as { overview: OverviewSnapshot };
   return body.overview;
@@ -75,7 +85,7 @@ export async function fetchMyChecks(
     `/api/checks?address=${encodeURIComponent(address)}&limit=${limit}`,
   );
   if (!response.ok) {
-    throw new Error(`Checks request failed: ${response.status}`);
+    throw new Error(await readErrorMessage(response, "Checks request failed"));
   }
   const body = (await response.json()) as { checks: GenLayerCheck[] };
   return body.checks.map(mapCheckRow);
