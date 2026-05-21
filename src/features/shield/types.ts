@@ -13,7 +13,6 @@ export type ShieldVerdictProvenance = {
   createdEpoch?: number;
   lastReviewEpoch?: number;
   requester?: string;
-  claimedRequester?: string;
   challengeCount?: number;
   lossReportTxHash?: string;
   note?: string;

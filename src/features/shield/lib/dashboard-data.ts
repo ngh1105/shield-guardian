@@ -22,7 +22,6 @@ export type CheckRow = {
   website: string;
   createdEpoch: number;
   requester: string;
-  claimedRequester: string;
   coverageStatus: string;
   lossReportTxHash: string;
   note: string;
@@ -52,7 +51,6 @@ function mapCheckRow(check: GenLayerCheck): CheckRow {
     website: check.website,
     createdEpoch: check.created_epoch,
     requester: check.requester,
-    claimedRequester: check.claimed_requester,
     coverageStatus: check.coverage_status,
     lossReportTxHash: check.loss_report_tx_hash,
     note: check.note,

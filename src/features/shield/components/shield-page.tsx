@@ -151,11 +151,12 @@ export function ShieldPage() {
   const [isPending, startTransition] = useTransition();
   const lastMirroredResultKey = useRef<string | null>(null);
   const wallet = useWallet();
+  const { bumpInvalidation } = wallet;
   const verdict = useShieldVerdict();
   const policyActions = usePolicyCourtActions({
     walletAddress: wallet.address,
     status: wallet.status,
-    bumpInvalidation: wallet.bumpInvalidation,
+    bumpInvalidation,
   });
 
   useEffect(() => {
@@ -208,7 +209,7 @@ export function ShieldPage() {
         try {
           const response = await requestShieldVerdict(payload, { demoMode: true });
           setResult(response);
-          wallet.bumpInvalidation();
+          bumpInvalidation();
         } catch {
           setError(
             "Demo analysis unavailable. Confirm SHIELD_ENABLE_DEMO_MODE=1 on the server.",
@@ -245,9 +246,9 @@ export function ShieldPage() {
       lastMirroredResultKey.current = resultKey;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror async verdict result into local state for canvas rendering
       setResult(verdict.state.result);
-      wallet.bumpInvalidation();
+      bumpInvalidation();
     }
-  }, [verdict.state.phase, verdict.state.result, wallet.bumpInvalidation]);
+  }, [verdict.state.phase, verdict.state.result, bumpInvalidation]);
 
   return (
     <div className={styles.page}>

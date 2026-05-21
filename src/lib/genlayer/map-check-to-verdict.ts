@@ -69,7 +69,6 @@ export function mapCheckToVerdict(
       createdEpoch: check.created_epoch,
       lastReviewEpoch: check.last_review_epoch,
       requester: check.requester,
-      claimedRequester: check.claimed_requester,
       challengeCount: check.challenge_count,
       lossReportTxHash: check.loss_report_tx_hash,
       note: check.note,
