@@ -49,7 +49,7 @@ export async function submitBrowserVerdictRequest(
   const client = createClient({
     account: deps.walletAddress,
     chain: studionet,
-    provider: deps.provider as never,
+    provider: deps.provider,
   });
 
   const transactionHash = await client.writeContract({
@@ -122,7 +122,7 @@ export async function challengeBrowserVerdict(
   const client = createClient({
     account: deps.walletAddress,
     chain: studionet,
-    provider: deps.provider as never,
+    provider: deps.provider,
   });
 
   const transactionHash = await client.writeContract({
@@ -164,7 +164,7 @@ export async function reportBrowserLoss(
   const client = createClient({
     account: deps.walletAddress,
     chain: studionet,
-    provider: deps.provider as never,
+    provider: deps.provider,
   });
 
   const transactionHash = await client.writeContract({
